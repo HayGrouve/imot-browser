@@ -1,8 +1,8 @@
 # imot.bg browser
 
 A local, bilingual (English / Bulgarian) browser for real-estate listings from [imot.bg](https://www.imot.bg).
-Paste search links, and it imports every listing behind them into a searchable, sortable list and an
-interactive map grouped by city / village, with full listing details and links back to the originals.
+Search imot.bg from inside the app (or paste search links), and it imports every listing found into a searchable,
+sortable list and an interactive map grouped by city / village, with full listing details and links back to the originals.
 
 No dependencies beyond Node.js, so there is no `npm install` step.
 
@@ -12,7 +12,10 @@ No dependencies beyond Node.js, so there is no `npm install` step.
 node server.mjs            # → http://127.0.0.1:8787
 ```
 
-1. Click **Import** and paste one or more links (one per line), e.g.
+1. Click **Search imot.bg** and fill in imot.bg's own search form: sale or rent, property types, city or province and
+   its districts, price, price per m², area, floor, and under **More filters** construction, year, features and more.
+   Press **Search and import**.
+   Or click **Import** and paste one or more links (one per line), e.g.
    `https://www.imot.bg/obiavi/prodazhbi/oblast-sofiya/kashta?price_min=55000&price_max=185000&plnk=625984`
 2. Leave “Fetch each listing’s page” on for full descriptions, all photos, features and last-updated dates.
 3. Listings appear as soon as the search pages are read; details fill in while the import continues.
@@ -44,6 +47,12 @@ The CLI and the server share `data/`. The server picks up changes made by the CL
 
 ## Features
 
+- **Search imot.bg**: a dialog with the filters of imot.bg's own search form. The option lists (property types, places,
+  districts, floors, sort orders, extra filters) are read from the live form, because sales and rentals number them
+  differently. The dialog follows the site's rules: types from different groups can't be combined, and construction,
+  feature and plot filters appear for the types that have them. Pressing Search sends the form to imot.bg's own link
+  builder, the same request its “ТЪРСИ” button makes, and imports the resulting `/obiavi/...` link. The search then
+  shows under Import → Imported searches, so it can be re-imported later. The last search is remembered.
 - **Search and filters**: one search box (Latin or Cyrillic, so `bov` finds `Бов`; press `/` to jump to it)
   and a row of filter pills: Type, Location, Price, Size, More and Starred. Each pill opens a small popover,
   so only the filters you use take up space. More holds “new since last import”, “hide no longer listed” and
@@ -71,6 +80,12 @@ The CLI and the server share `data/`. The server picks up changes made by the CL
 ## Limitations of extracting data from imot.bg links
 
 imot.bg has no public API, so the importer reads the same HTML pages a browser sees.
+
+**Search dialog**
+
+- It depends on the markup of imot.bg's search form and on its internal link builder (`/pcgi/subscript.cgi`). If
+  either changes, the dialog shows an error; pasting links still works.
+- Not mirrored: business types, “price advantage” compared with the area average, and the agency filter.
 
 **Links**
 
@@ -123,6 +138,7 @@ imot.bg and the advertisers.
 server.mjs              local HTTP server (UI + JSON API), binds 127.0.0.1
 cli.mjs                 command-line import / export / stats / reparse
 lib/parse.mjs           imot.bg HTML + URL parsing
+lib/searchform.mjs      imot.bg's search form: live option lists and its search-link builder
 lib/importer.mjs        import pipeline: pagination, price-band splitting, details, geocoding
 lib/http.mjs            throttled fetch with retries, windows-1251 decoding, block detection
 lib/gazetteer.mjs       offline settlement lookup (GeoNames)

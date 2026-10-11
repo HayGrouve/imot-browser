@@ -50,6 +50,7 @@ const S = {
   map: null, layer: null, markerByKey: new Map(), groups: [], fitted: false, mapCtlOpen: false,
   pop: null, popQuery: '', view: 'list',
   job: null, pollTimer: null, lastPhase: null,
+  sf: { form: null, loading: null, error: null, note: null, view: 'form', url: null, busy: false, moreOpen: false },
   detailId: null, photoIdx: 0, readOnly: !!EMBEDDED,
 };
 
@@ -148,7 +149,7 @@ async function api(path, { method = 'GET', body } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+  if (!res.ok) throw Object.assign(new Error(json.error || `HTTP ${res.status}`), { status: res.status, code: json.code });
   return json;
 }
 
@@ -619,7 +620,7 @@ function renderEmpty() {
   if (S.loadError) el.innerHTML = block('warning', t('loadErrorTitle'), t('loadErrorBody', { message: S.loadError }));
   else if (!S.listings.length) {
     el.innerHTML = block('house-simple-fill', t('emptyTitle'), t('emptyBody'),
-      `<button type="button" class="btn primary" data-empty-import>${icon('cloud-arrow-down')}${esc(t('import'))}</button>`);
+      `<div class="empty-actions"><button type="button" class="btn primary" data-empty-search>${icon('list-magnifying-glass')}${esc(t('searchImot'))}</button><button type="button" class="btn" data-empty-import>${icon('cloud-arrow-down')}${esc(t('import'))}</button></div>`);
   } else {
     el.innerHTML = block('funnel-simple', t('emptyFilteredTitle'), t('emptyFilteredBody'),
       `<button type="button" class="btn" data-clear-all>${esc(t('clearAll'))}</button>`);
@@ -1200,12 +1201,18 @@ function toggleStar(id) {
 // ---------------------------------------------------------------- import dialog
 
 function renderJob() {
-  const box = $('#jobView');
   const j = S.job;
   const running = j && (j.status === 'running' || j.status === 'queued');
   $('#btnStart').disabled = !!running;
   $('#btnCancel').hidden = !running;
   $('#btnImport').classList.toggle('busy', !!running);
+  sfUpdateFoot();
+  if (S.sf.view === 'job') renderSearchInfo();
+  // The import dialog and the imot.bg search dialog both show the job.
+  for (const box of $$('[data-job-view]')) renderJobInto(box, j, running);
+}
+
+function renderJobInto(box, j, running) {
   if (!j) { box.innerHTML = ''; return; }
   // The job view re-renders every second while running: keep the log disclosure and its scroll as they were.
   const oldLog = box.querySelector('.job-log');
@@ -1262,9 +1269,14 @@ async function pollJob() {
   }
 }
 
+/** Import options; the switches in the import and search dialogs mirror each other. */
+function importOptions() {
+  const on = (k) => $(`[data-opt="${k}"]`)?.checked !== false;
+  return { details: on('details'), autoSplit: on('autoSplit'), geocodeOnline: on('geocodeOnline') };
+}
+
 async function startImport(inputs) {
-  const options = { details: $('#optDetails').checked, autoSplit: $('#optSplit').checked, geocodeOnline: $('#optGeocode').checked };
-  saveJson('importOptions', options);
+  const options = importOptions();
   try {
     const { job } = await api('/api/import', { method: 'POST', body: { inputs, options } });
     S.job = job; S.lastPhase = job.phase;
@@ -1299,6 +1311,496 @@ function renderSources() {
   </div>
 </li>`;
   }).join('')}</ul>`;
+}
+
+// ---------------------------------------------------------------- imot.bg search dialog
+// Mirrors imot.bg's own search form. The option lists come from the live form (through the
+// server), so property-type ids and extra-filter fields always match the chosen deal.
+
+const SEARCH_QUERY = {
+  deal: 'sale', types: [], location: '', districts: [], priceMin: '', priceMax: '', currency: 'EUR', ppmMin: '', ppmMax: '',
+  areaMin: '', areaMax: '', floorFrom: '', floorTo: '', sort: '', keyword: '', yardMin: '', yardMax: '', status: [],
+  yearFrom: '', yearTo: '', extras: {}, photoOnly: false, videoOnly: false,
+};
+const SF_FIELDS = ['location', 'priceMin', 'priceMax', 'currency', 'ppmMin', 'ppmMax', 'areaMin', 'areaMax', 'floorFrom', 'floorTo',
+  'sort', 'keyword', 'yardMin', 'yardMax', 'yearFrom', 'yearTo'];
+// Form labels that are not listing types of their own.
+const SF_TYPE_LABELS = { 'СТАЯ': ['Room', 'Стая'], 'МЯСТО': ['Plot', 'Място'], 'ГАРАЖ, ПАРКОМЯСТО': ['Garage, parking space', 'Гараж, паркомясто'] };
+const SF_PLACE_PREFIX = [[/^гр\.\s*/, 'town'], [/^с\.\s*/, 'village'], [/^к\.к\.\s*/, 'resort'], [/^(?:м-т|местност)\s*/i, 'locality'], [/^в\.з\.\s*/, 'villaZone']];
+let sq = { ...SEARCH_QUERY, ...loadJson('searchQuery', {}) };
+if (sq.deal !== 'rent') sq.deal = 'sale';
+
+const sfRunning = () => !!S.job && (S.job.status === 'running' || S.job.status === 'queued');
+
+function sfTypeLabel(bg) {
+  const lang = getLang();
+  if (SF_TYPE_LABELS[bg]) return SF_TYPE_LABELS[bg][lang === 'bg' ? 1 : 0];
+  const p = PROPERTY_TYPES.find((x) => x.re.test(bg));
+  if (p) return lang === 'bg' ? p.bg : p.en;
+  return bg.charAt(0) + bg.slice(1).toLowerCase();
+}
+
+/** "град София" -> Sofia, "област София" -> Sofia Province (English); Bulgarian as imot.bg writes it. */
+function sfLocationLabel(v) {
+  if (getLang() === 'bg') return v;
+  const m = v.match(/^(град|област)\s+(.+)$/);
+  if (!m) return term(v, 'en');
+  return m[1] === 'град' ? transliterate(m[2]) : oblastLabel(m[2]);
+}
+
+function sfDistrictLabel(d) {
+  if (getLang() === 'bg') return d;
+  for (const [re, kind] of SF_PLACE_PREFIX) if (re.test(d)) return `${transliterate(d.replace(re, ''))} (${KIND_EN[kind]})`;
+  return transliterate(d);
+}
+
+function sfFloorLabel(o) {
+  if (getLang() === 'bg') return o.label;
+  return { 1000: t('sfTopOnly'), 999: t('sfNotTop'), 0: t('sfGround') }[o.value] ?? o.value;
+}
+
+function sfSortLabel(o) {
+  const key = `sfSort${o.value}`;
+  return getLang() === 'bg' || t(key) === key ? o.label : t(key);
+}
+
+/** Extra-filter sections imot.bg shows for the chosen property types. */
+function sfSections() {
+  const out = new Set();
+  for (const id of sq.types) for (const s of S.sf.form?.sectionsByType[id] || []) out.add(s);
+  return out;
+}
+
+function sfSelect(name, opts, value, { any = t('sfAny'), id = '' } = {}) {
+  return `<select name="${esc(name)}"${id ? ` id="${id}"` : ''}>${any != null ? `<option value="">${esc(any)}</option>` : ''}${
+    opts.map((o) => `<option value="${esc(o.value)}"${String(value) === o.value ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select>`;
+}
+
+function sfNum(name, label, suffix, step) {
+  return `<label class="num-field"><span class="hint">${esc(label)}</span><span class="affix${suffix.length > 2 ? ' wide' : ''}"><input type="number" name="${name}" min="0" step="${step}" inputmode="decimal" value="${esc(sq[name])}"><span class="sfx"${/^(price|ppm)/.test(name) ? ' data-cur' : ''}>${esc(suffix)}</span></span></label>`;
+}
+
+const sfRange = (a, b, suffix, step) => `<div class="range">${sfNum(a, t('sfFrom'), suffix, step)}<span class="range-sep">-</span>${sfNum(b, t('sfTo'), suffix, step)}</div>`;
+const sfSelRange = (a, b, optsA, optsB) => `<div class="range"><label class="num-field"><span class="hint">${esc(t('sfFrom'))}</span>${sfSelect(a, optsA, sq[a])}</label><span class="range-sep">-</span><label class="num-field"><span class="hint">${esc(t('sfTo'))}</span>${sfSelect(b, optsB, sq[b])}</label></div>`;
+const sfGroup = (id, label, body, attrs = '') => `<div class="sf-field" role="group" aria-labelledby="sfL-${id}"${attrs}><span class="field-label" id="sfL-${id}">${esc(label)}</span>${body}</div>`;
+const sfChip = (name, value, label, on) => `<label class="chip"><input type="checkbox" name="${esc(name)}" value="${esc(value)}"${on ? ' checked' : ''}><span>${esc(label)}</span></label>`;
+const sfChips = (label, chips, attrs = '') => `<fieldset class="sf-field"${attrs}><legend class="field-label">${esc(label)}</legend><div class="chips">${chips}</div></fieldset>`;
+const sfSeg = (name, label, opts, value) => `<div class="seg sf-seg" role="radiogroup" aria-label="${esc(label)}">${
+  opts.map(([v, text]) => `<label><input type="radio" name="${name}" value="${esc(v)}"${value === v ? ' checked' : ''}><span>${esc(text)}</span></label>`).join('')}</div>`;
+
+function sfLocationOptions(f) {
+  const collator = new Intl.Collator(locale());
+  const opt = (v) => `<option value="${esc(v)}"${sq.location === v ? ' selected' : ''}>${esc(sfLocationLabel(v))}</option>`;
+  const group = (label, list) => (list.length ? `<optgroup label="${esc(label)}">${list.sort((a, b) => collator.compare(sfLocationLabel(a), sfLocationLabel(b))).map(opt).join('')}</optgroup>` : '');
+  const all = f.locations.map((l) => l.value);
+  return `<option value="">${esc(t('sfAnywhere'))}</option>${group(t('sfCities'), all.filter((v) => v.startsWith('град ')))}${
+    group(t('sfProvinces'), all.filter((v) => v.startsWith('област ')))}${group(t('sfAbroad'), all.filter((v) => !/^(град|област) /.test(v)))}`;
+}
+
+function sfPickedHtml() {
+  return sq.districts.map((d) => `<button type="button" class="chip removable" data-unpick="${esc(d)}" aria-label="${esc(`${t('clearFilter')}: ${sfDistrictLabel(d)}`)}"><span>${esc(sfDistrictLabel(d))}</span>${icon('x')}</button>`).join('');
+}
+
+function sfDistrictsHtml() {
+  const f = S.sf.form;
+  if (!sq.location || !f) return '';
+  if (f.location !== sq.location) return `<p class="sf-loading small"><span class="spinner"></span>${esc(t('sfDistrictsLoading'))}</p>`;
+  if (!f.districts.length) return '';
+  const city = sq.location.startsWith('град ');
+  const collator = new Intl.Collator(locale());
+  const list = getLang() === 'bg' ? f.districts : [...f.districts].sort((a, b) => collator.compare(sfDistrictLabel(a), sfDistrictLabel(b)));
+  return `<fieldset class="sf-districts"><legend class="field-label">${esc(t(city ? 'sfDistricts' : 'sfPlaces'))} <span class="n" id="sfDistrictCount">${
+    esc(sq.districts.length ? t('sfSelected', { n: fmtNum(sq.districts.length) }) : t('sfDistrictsHint'))}</span></legend>
+<div class="chips sf-picked" id="sfPicked">${sfPickedHtml()}</div>
+<span class="pop-search">${icon('magnifying-glass')}<input type="search" id="sfDistrictQ" placeholder="${esc(t(city ? 'sfDistrictSearch' : 'sfPlaceSearch'))}" aria-label="${esc(t(city ? 'sfDistrictSearch' : 'sfPlaceSearch'))}" autocomplete="off"></span>
+<ul class="sf-dlist" id="sfDistrictList">${list.map((d) => `<li data-key="${esc(searchKey(d))}"><label class="check"><input type="checkbox" name="district" value="${esc(d)}"${
+    sq.districts.includes(d) ? ' checked' : ''}><span>${esc(sfDistrictLabel(d))}</span></label></li>`).join('')}<li class="opt-empty" id="sfDistrictNone" hidden>${esc(t('sfNoMatch'))}</li></ul></fieldset>`;
+}
+
+function sfExtraHtml(f, id, label) {
+  const sec = f.extras[id];
+  if (!sec || (!sec.checks.length && !sec.selects.length)) return '';
+  const lang = getLang();
+  const chips = sec.checks.map((c) => sfChip(`x:${c.name}`, c.value, term(c.label, lang), sq.extras[c.name] === c.value)).join('');
+  const selects = sec.selects.map((s) => `<label class="sf-inline"><span>${esc(term(s.label, lang))}</span>${
+    sfSelect(`x:${s.name}`, s.options.map((o) => ({ value: o.value, label: term(o.label, lang) })), sq.extras[s.name] || '')}</label>`).join('');
+  return `<fieldset class="sf-field" data-section="${id}"><legend class="field-label">${esc(label)}</legend>${chips ? `<div class="chips">${chips}</div>` : ''}${selects ? `<div class="sf-selects">${selects}</div>` : ''}</fieldset>`;
+}
+
+function sfMoreHtml(f) {
+  const tb = f.extras.extritb;
+  const years = (list) => list.map((v) => ({ value: v, label: v }));
+  const build = `<div class="sf-stack" data-section="extritb">${tb.checks.length ? sfChips(t('sfConstruction'), tb.checks.map((c) => sfChip(`x:${c.name}`, c.value, term(c.label, getLang()), sq.extras[c.name] === c.value)).join('')) : ''}${
+    sfChips(t('sfStatus'), ['1', '2'].map((v) => sfChip('status', v, t(`sfStatus${v}`), sq.status.includes(v))).join(''))}${
+    f.yearsFrom.length ? sfGroup('year', t('sfYear'), sfSelRange('yearFrom', 'yearTo', years(f.yearsFrom), years(f.yearsTo))) : ''}</div>`;
+  return `<details class="opts sf-more" id="sfMore"${S.sf.moreOpen ? ' open' : ''}><summary>${icon('funnel-simple')}<span>${esc(t('sfMore'))}</span><span class="n" id="sfMoreCount"></span>${icon('caret-down', 'opts-caret')}</summary>
+<div class="sf-more-body">
+<div class="sf-field"><label class="field-label" for="sfKeyword">${esc(t('sfKeyword'))}</label><input type="text" id="sfKeyword" name="keyword" maxlength="40" value="${esc(sq.keyword)}" aria-describedby="sfKeywordHint" lang="bg"><p class="sf-hint" id="sfKeywordHint">${esc(t('sfKeywordHint'))}</p></div>
+<p class="sf-hint sf-pick" id="sfPickType">${esc(t('sfPickType'))}</p>
+${sfGroup('yard', t('sfYard'), sfRange('yardMin', 'yardMax', sqm(), 50), ' data-section="areah"')}
+${build}${sfExtraHtml(f, 'extri1', t('sfFeatures'))}${sfExtraHtml(f, 'extrip', t('sfPlot'))}
+${sfChips(t('sfMedia'), sfChip('photoOnly', '1', t('sfPhotoOnly'), sq.photoOnly) + sfChip('videoOnly', '1', t('sfVideoOnly'), sq.videoOnly))}
+</div></details>`;
+}
+
+function sfFieldsHtml(f) {
+  const cur = sq.currency === '$' ? '$' : '€';
+  const floors = (list) => list.map((o) => ({ value: o.value, label: sfFloorLabel(o) }));
+  const groups = [];
+  for (const ty of f.types) {
+    let g = groups.find((x) => x.id === ty.group);
+    if (!g) groups.push(g = { id: ty.group, types: [] });
+    g.types.push(ty);
+  }
+  const types = `<fieldset class="sf-field"><legend class="field-label">${esc(t('typeHeading'))}</legend><div class="sf-types">${groups.map((g) => `<div class="sf-group" data-group="${g.id}">${
+    g.types.map((ty) => `<label class="check"><input type="checkbox" name="type" value="${esc(ty.id)}"${sq.types.includes(ty.id) ? ' checked' : ''}><span>${esc(sfTypeLabel(ty.label))}</span></label>`).join('')}</div>`).join('')}</div><p class="sf-hint">${esc(t('sfTypeHint'))}</p></fieldset>`;
+  const currency = f.currencies.length > 1 ? sfSeg('currency', t('sfCurrency'), f.currencies.map((c) => [c, c === '$' ? 'USD' : c]), sq.currency || f.currencies[0]) : '';
+  return `${sfSeg('deal', t('sfDeal'), [['sale', t('sfSale')], ['rent', t('sfRent')]], f.deal)}
+${types}
+<div class="sf-field"><label class="field-label" for="sfLocation">${esc(t('sfLocation'))}</label><select id="sfLocation" name="location">${sfLocationOptions(f)}</select><div id="sfDistricts">${sfDistrictsHtml()}</div></div>
+<div class="sf-grid">
+<div class="sf-field" role="group" aria-labelledby="sfL-price"><div class="sf-head"><span class="field-label" id="sfL-price">${esc(t(f.deal === 'rent' ? 'sfRentPrice' : 'sfPrice'))}</span>${currency}</div>${sfRange('priceMin', 'priceMax', cur, 1000)}</div>
+${sfGroup('ppm', t('sfPpm'), sfRange('ppmMin', 'ppmMax', `${cur}/${sqm()}`, 100))}
+${sfGroup('area', t('sfArea'), sfRange('areaMin', 'areaMax', sqm(), 5))}
+${sfGroup('floor', t('sfFloor'), sfSelRange('floorFrom', 'floorTo', floors(f.floorsFrom), floors(f.floorsTo)))}
+<div class="sf-field"><label class="field-label" for="sfSort">${esc(t('sfSort'))}</label>${sfSelect('sort', f.sorts.map((o) => ({ value: o.value, label: sfSortLabel(o) })), sq.sort || f.sorts[0]?.value, { any: null, id: 'sfSort' })}<p class="sf-hint">${esc(t('sfSortHint'))}</p></div>
+</div>
+${sfMoreHtml(f)}`;
+}
+
+/** Selector for the focused form control, to put focus back after a re-render. */
+function sfFocusSelector() {
+  const a = document.activeElement;
+  if (!a?.closest?.('#sfFields') || !a.name) return a?.id && a.closest?.('#sfFields') ? `#${CSS.escape(a.id)}` : null;
+  return `[name="${CSS.escape(a.name)}"]${a.type === 'checkbox' || a.type === 'radio' ? `[value="${CSS.escape(a.value)}"]` : ''}`;
+}
+
+function renderSearchFields() {
+  const box = $('#sfFields');
+  const f = S.sf.form;
+  box.classList.remove('is-loading');
+  if (!f) {
+    box.innerHTML = S.sf.error
+      ? `<div class="sf-error" role="alert"><p>${esc(t('sfLoadError', { message: S.sf.error }))}</p><button type="button" class="btn small" data-sf-retry>${icon('arrow-clockwise')}${esc(t('sfRetry'))}</button></div>`
+      : `<p class="sf-loading"><span class="spinner"></span>${esc(t('sfLoading'))}</p>`;
+  } else {
+    const focus = sfFocusSelector();
+    box.innerHTML = sfFieldsHtml(f);
+    sfApplyRules();
+    if (focus) $(focus, box)?.focus();
+  }
+  sfUpdateFoot();
+}
+
+function renderSfDistricts() {
+  const box = $('#sfDistricts');
+  if (box) box.innerHTML = sfDistrictsHtml();
+}
+
+/** imot.bg's rules: only types from one group at a time, and extra filters depend on the types. */
+function sfApplyRules() {
+  const f = S.sf.form;
+  const box = $('#sfFields');
+  if (!f || !box) return;
+  const group = f.types.find((x) => sq.types.includes(x.id))?.group ?? null;
+  for (const g of $$('.sf-group', box)) {
+    const locked = group != null && Number(g.dataset.group) !== group;
+    g.classList.toggle('is-locked', locked);
+    for (const input of $$('input', g)) input.disabled = locked;
+  }
+  const sections = sfSections();
+  let shown = 0;
+  for (const el of $$('[data-section]', box)) {
+    el.hidden = !sections.has(el.dataset.section);
+    if (!el.hidden) shown++;
+  }
+  $('#sfPickType', box).hidden = shown > 0;
+  const n = sfMoreCount();
+  $('#sfMoreCount', box).textContent = n ? fmtNum(n) : '';
+}
+
+/** Number of "More filters" in effect (hidden sections don't count: they are not sent). */
+function sfMoreCount() {
+  const q = sfPayload();
+  return [q.keyword, q.yardMin || q.yardMax, q.yearFrom || q.yearTo, q.photoOnly, q.videoOnly].filter(Boolean).length
+    + q.status.length + Object.keys(q.extras).length;
+}
+
+/** Read the form into `sq` (and remember it). */
+function sfRead() {
+  const form = $('#searchForm');
+  if (!S.sf.form || !$('[name="deal"]', form)) return;
+  const fd = new FormData(form);
+  const q = { ...sq, types: fd.getAll('type').map(String), status: fd.getAll('status').map(String), extras: { ...sq.extras } };
+  q.deal = String(fd.get('deal') || sq.deal);
+  q.photoOnly = fd.has('photoOnly');
+  q.videoOnly = fd.has('videoOnly');
+  for (const k of SF_FIELDS) if (fd.has(k)) q[k] = String(fd.get(k)).trim();
+  if ($('#sfDistrictList')) q.districts = fd.getAll('district').map(String);
+  // Fields of hidden sections keep their values for when the section shows again.
+  for (const el of $$('[name^="x:"]', form)) {
+    const name = el.name.slice(2);
+    if (el.type === 'checkbox') {
+      if (el.checked) q.extras[name] = el.value;
+      else if (q.extras[name] === el.value) delete q.extras[name];
+    } else if (el.value) q.extras[name] = el.value;
+    else delete q.extras[name];
+  }
+  sq = q;
+  saveJson('searchQuery', sq);
+}
+
+/** The query as sent: only filters imot.bg would apply for the chosen types and place. */
+function sfPayload() {
+  const f = S.sf.form;
+  const sections = sfSections();
+  const q = { ...sq, extras: {} };
+  for (const [id, sec] of Object.entries(f?.extras || {})) {
+    if (!sections.has(id)) continue;
+    for (const c of sec.checks) if (sq.extras[c.name] === c.value) q.extras[c.name] = c.value;
+    for (const s of sec.selects) if (sq.extras[s.name]) q.extras[s.name] = sq.extras[s.name];
+  }
+  if (!sections.has('areah')) Object.assign(q, { yardMin: '', yardMax: '' });
+  if (!sections.has('extritb')) Object.assign(q, { status: [], yearFrom: '', yearTo: '' });
+  if (!q.location) q.districts = [];
+  return q;
+}
+
+/**
+ * Fit the saved query to a newly loaded form. Switching between sales and rentals keeps types and
+ * extra filters by their label, since imot.bg numbers them differently.
+ */
+function sfAdapt(prev, next) {
+  if (prev && prev.deal !== next.deal) {
+    const label = new Map(prev.types.map((x) => [x.id, x.label]));
+    sq.types = sq.types.map((id) => next.types.find((x) => x.label === label.get(id))?.id).filter(Boolean);
+    const extras = {};
+    for (const id of Object.keys(next.extras)) {
+      for (const c of prev.extras[id]?.checks || []) {
+        const m = sq.extras[c.name] === c.value && next.extras[id]?.checks.find((x) => x.value === c.value);
+        if (m) extras[m.name] = m.value;
+      }
+      for (const s of prev.extras[id]?.selects || []) {
+        const m = sq.extras[s.name] && next.extras[id]?.selects.find((x) => x.label === s.label && x.options.some((o) => o.value === sq.extras[s.name]));
+        if (m) extras[m.name] = sq.extras[s.name];
+      }
+    }
+    sq.extras = extras;
+  }
+  // Drop what the live form doesn't offer (e.g. an old saved query), and keep to one type group.
+  const types = sq.types.map((id) => next.types.find((x) => x.id === id)).filter(Boolean);
+  sq.types = types.filter((x) => x.group === types[0].group).map((x) => x.id);
+  const names = new Set(Object.values(next.extras).flatMap((sec) => [...sec.checks, ...sec.selects].map((x) => x.name)));
+  sq.extras = Object.fromEntries(Object.entries(sq.extras).filter(([k]) => names.has(k)));
+  if (!next.locations.some((l) => l.value === sq.location)) sq.location = '';
+  if (sq.location && next.location === sq.location) sq.districts = sq.districts.filter((d) => next.districts.includes(d));
+  if (!next.currencies.includes(sq.currency)) sq.currency = next.currencies[0] || '';
+  sq.deal = next.deal;
+  saveJson('searchQuery', sq);
+}
+
+async function loadSearchForm() {
+  const key = `${sq.deal}|${sq.location}`;
+  if (S.sf.loading === key) return;
+  S.sf.loading = key;
+  S.sf.error = null;
+  const prev = S.sf.form;
+  if (!prev) renderSearchFields();
+  else if (prev.deal !== sq.deal) $('#sfFields').classList.add('is-loading');
+  else renderSfDistricts();
+  sfUpdateFoot();
+  try {
+    const { form } = await api(`/api/search-form?${new URLSearchParams({ deal: sq.deal, location: sq.location })}`);
+    if (S.sf.loading !== key) return;
+    S.sf.loading = null;
+    sfAdapt(prev, form);
+    S.sf.form = form;
+    // A full render also clears the dimming of a deal switch that was switched back meanwhile.
+    if (prev && prev.deal === form.deal && !$('#sfFields').classList.contains('is-loading')) { renderSfDistricts(); sfUpdateFoot(); } else renderSearchFields();
+  } catch (err) {
+    if (S.sf.loading !== key) return;
+    S.sf.loading = null;
+    if (err.status === 400 && sq.location) {
+      // A saved place imot.bg no longer lists: search everywhere instead.
+      Object.assign(sq, { location: '', districts: [] });
+      saveJson('searchQuery', sq);
+      loadSearchForm();
+    } else if (prev) {
+      // Keep the form that works; undo the change that needed another one.
+      S.sf.note = { text: t('sfLoadError', { message: sfErrorText(err) }), error: true };
+      sq.deal = prev.deal;
+      if (sq.location !== prev.location) { sq.location = prev.location; sq.districts = []; }
+      saveJson('searchQuery', sq);
+      renderSearchFields();
+    } else {
+      S.sf.error = sfErrorText(err);
+      renderSearchFields();
+    }
+  }
+}
+
+/** Translated message for known error codes (e.g. imot.bg blocking requests), else the server's text. */
+function sfErrorText(err) {
+  const key = `err_${err.code}`;
+  return err.code && t(key) !== key ? t(key) : err.message;
+}
+
+function sfUpdateFoot() {
+  if (!$('#searchDlg')) return;
+  const running = sfRunning();
+  const jobView = S.sf.view === 'job';
+  $('#searchForm').hidden = jobView;
+  $('#sfProgress').hidden = !jobView;
+  $('#sfReset').hidden = jobView;
+  $('#sfGo').hidden = jobView;
+  $('#sfEdit').hidden = !jobView;
+  $('#sfCancel').hidden = !jobView || !running;
+  $('#sfShow').hidden = !jobView || running;
+  $('#sfGo').disabled = !S.sf.form || !!S.sf.loading || running || S.sf.busy;
+  $('#sfGo').classList.toggle('busy', S.sf.busy);
+  const note = $('#sfNote');
+  const msg = jobView ? null : S.sf.busy ? { text: t('sfResolving') } : S.sf.note
+    || (running ? { text: t('sfBusy') } : S.sf.form && !sq.location ? { text: t('sfNoLocation') } : null);
+  note.textContent = msg?.text || '';
+  note.classList.toggle('error', !!msg?.error);
+  note.setAttribute('role', msg?.error ? 'alert' : 'status');
+}
+
+function renderSearchInfo() {
+  const url = safeUrl(S.sf.url);
+  const params = (S.job?.inputs?.find((i) => i.input === S.sf.url)?.paramsText || '').replace(/[\s,]+$/, '');
+  $('#sfSearchInfo').innerHTML = url ? `<a class="sf-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${icon('arrow-square-out')}<span>${esc(t('sfOnImot'))}</span></a>${
+    params ? `<p class="source-params"><span class="sp-label">${esc(t('sourceParamsLabel'))}</span> <span lang="bg">${esc(params)}</span></p>` : ''}` : '';
+}
+
+function openSearch() {
+  closeMenu();
+  if (S.sf.view === 'job' && !sfRunning() && S.job?.inputs?.[0]?.input !== S.sf.url) S.sf.view = 'form';
+  $('#searchDlg').showModal();
+  if (S.sf.form) renderSearchFields();
+  if (S.sf.view === 'job') renderSearchInfo();
+  sfUpdateFoot();
+  if (!S.sf.form || S.sf.form.deal !== sq.deal || (sq.location && S.sf.form.location !== sq.location)) loadSearchForm();
+  pollJob();
+}
+
+/** Range fields and their labels, to point at the first one imot.bg would get wrong. */
+const SF_RANGES = [['priceMin', 'priceMax'], ['ppmMin', 'ppmMax', 'sfPpm'], ['areaMin', 'areaMax', 'sfArea'], ['yardMin', 'yardMax', 'sfYard'], ['yearFrom', 'yearTo', 'sfYear']];
+
+/** First invalid field among those that will be sent: { name, text }, or null. */
+function sfInvalid(q) {
+  const label = (key) => t(key || (q.deal === 'rent' ? 'sfRentPrice' : 'sfPrice'));
+  for (const el of $$('#sfFields input[type="number"]')) {
+    const range = SF_RANGES.find((r) => r.slice(0, 2).includes(el.name));
+    if (!range || el.closest('[hidden]')) continue; // hidden sections are not sent
+    if (el.validity.badInput || (q[el.name] !== '' && el.validity.rangeUnderflow)) return { name: el.name, text: t('sfNumberError', { field: label(range[2]) }) };
+  }
+  for (const [a, b, key] of SF_RANGES) {
+    if (q[a] !== '' && q[b] !== '' && Number(q[a]) > Number(q[b])) return { name: a, text: t('sfRangeError', { field: label(key) }) };
+  }
+  return null;
+}
+
+async function submitSearch() {
+  sfRead();
+  if (!S.sf.form || S.sf.busy || S.sf.loading || sfRunning()) return;
+  for (const el of $$('#sfFields [aria-invalid]')) el.removeAttribute('aria-invalid');
+  const bad = sfInvalid(sfPayload());
+  if (bad) {
+    const el = $(`#sfFields [name="${bad.name}"]`);
+    el.closest('details')?.setAttribute('open', '');
+    el.setAttribute('aria-invalid', 'true');
+    S.sf.note = { text: bad.text, error: true };
+    sfUpdateFoot();
+    el.focus();
+    return;
+  }
+  S.sf.busy = true;
+  S.sf.note = null;
+  sfUpdateFoot();
+  try {
+    const { job, url } = await api('/api/search', { method: 'POST', body: { query: sfPayload(), options: importOptions() } });
+    S.sf.url = url;
+    S.sf.view = 'job';
+    S.job = job;
+    S.lastPhase = job.phase;
+    S.sf.busy = false;
+    renderJob();
+    renderSearchInfo();
+    $('#sfProgress').focus();
+    pollJob();
+  } catch (err) {
+    S.sf.note = { text: sfErrorText(err), error: true };
+  } finally {
+    S.sf.busy = false;
+    sfUpdateFoot();
+  }
+}
+
+function bindSearchDialog() {
+  const dlg = $('#searchDlg');
+  const form = $('#searchForm');
+  $('#btnSearchImot').addEventListener('click', openSearch);
+  form.addEventListener('submit', (e) => { e.preventDefault(); submitSearch(); });
+  form.addEventListener('input', (e) => {
+    const el = e.target;
+    if (el.id === 'sfDistrictQ') {
+      const key = searchKey(el.value);
+      let n = 0;
+      for (const li of $$('#sfDistrictList li[data-key]')) { li.hidden = !!key && !li.dataset.key.includes(key); n += !li.hidden; }
+      $('#sfDistrictNone').hidden = n > 0;
+      return;
+    }
+    if (el.matches('input[type="number"], input[type="text"]')) { S.sf.note = null; sfRead(); sfApplyRules(); }
+  });
+  form.addEventListener('change', (e) => {
+    const el = e.target;
+    if (el.matches('[data-opt]') || el.id === 'sfDistrictQ' || !el.closest('#sfFields')) return;
+    S.sf.note = null;
+    const prevLocation = sq.location;
+    sfRead();
+    if (el.name === 'deal') loadSearchForm();
+    else if (el.name === 'location' && sq.location !== prevLocation) {
+      sq.districts = [];
+      saveJson('searchQuery', sq);
+      if (sq.location) loadSearchForm(); else renderSfDistricts();
+    } else if (el.name === 'district') {
+      $('#sfPicked').innerHTML = sfPickedHtml();
+      $('#sfDistrictCount').textContent = sq.districts.length ? t('sfSelected', { n: fmtNum(sq.districts.length) }) : t('sfDistrictsHint');
+    } else if (el.name === 'currency') {
+      for (const s of $$('[data-cur]', form)) s.textContent = s.textContent.replace(/^[€$]/, sq.currency === '$' ? '$' : '€');
+    }
+    sfApplyRules();
+    sfUpdateFoot();
+  });
+  form.addEventListener('click', (e) => {
+    const un = e.target.closest('[data-unpick]');
+    if (un) {
+      const box = $(`#sfDistrictList input[value="${CSS.escape(un.dataset.unpick)}"]`);
+      if (box) { box.checked = false; box.dispatchEvent(new Event('change', { bubbles: true })); }
+      ($('#sfPicked button') || $('#sfDistrictQ'))?.focus();
+    } else if (e.target.closest('[data-sf-retry]')) loadSearchForm();
+  });
+  form.addEventListener('toggle', (e) => { if (e.target.id === 'sfMore') S.sf.moreOpen = e.target.open; }, true);
+  $('#sfReset').addEventListener('click', () => {
+    sq = { ...SEARCH_QUERY, deal: sq.deal, currency: sq.currency };
+    saveJson('searchQuery', sq);
+    S.sf.note = null;
+    renderSearchFields();
+    if (!S.sf.form || S.sf.form.deal !== sq.deal) loadSearchForm();
+  });
+  $('#sfEdit').addEventListener('click', () => {
+    S.sf.view = 'form';
+    renderSearchFields();
+    $('#sfGo').focus();
+  });
+  $('#sfCancel').addEventListener('click', () => api('/api/job/cancel', { method: 'POST', body: {} }).catch(() => {}));
+  $('#sfShow').addEventListener('click', () => {
+    dlg.close();
+    setView('list');
+    fitMap();
+  });
+  dlg.addEventListener('close', () => { if (!sfRunning()) S.sf.view = 'form'; });
 }
 
 // ---------------------------------------------------------------- exports
@@ -1481,6 +1983,7 @@ function bindEvents() {
   $('#emptyMsg').addEventListener('click', (e) => {
     if (e.target.closest('[data-clear-all]')) clearAll();
     else if (e.target.closest('[data-empty-import]')) $('#btnImport')?.click();
+    else if (e.target.closest('[data-empty-search]')) $('#btnSearchImot')?.click();
   });
   $('#viewToggle').addEventListener('click', () => setView(S.view === 'map' ? 'list' : 'map'));
   $('#popScrim').addEventListener('click', () => closePop());
@@ -1549,6 +2052,7 @@ function bindEvents() {
     renderSources();
     applyFilters({ keepPage: true });
     if (S.job) renderJob();
+    if (S.sf.form && !S.readOnly) renderSearchFields();
     if ($('#detailDlg').open) renderDetail();
     S.map?.closePopup();
     renderMapCtl(false);
@@ -1573,6 +2077,13 @@ function bindEvents() {
   }
 
   if (S.readOnly) return;
+  bindSearchDialog();
+  document.addEventListener('change', (e) => {
+    const opt = e.target.closest('[data-opt]');
+    if (!opt) return;
+    for (const el of $$(`[data-opt="${opt.dataset.opt}"]`)) el.checked = opt.checked;
+    saveJson('importOptions', importOptions());
+  });
   $('#btnImport').addEventListener('click', () => { $('#importDlg').showModal(); pollJob(); });
   $('#btnStart').addEventListener('click', () => {
     const inputs = $('#importInput').value.trim();
@@ -1609,11 +2120,7 @@ async function boot() {
     for (const el of $$('[data-server-only]')) el.remove();
   } else {
     const opts = loadJson('importOptions', null);
-    if (opts) {
-      $('#optDetails').checked = opts.details !== false;
-      $('#optSplit').checked = opts.autoSplit !== false;
-      $('#optGeocode').checked = opts.geocodeOnline !== false;
-    }
+    if (opts) for (const el of $$('[data-opt]')) el.checked = opts[el.dataset.opt] !== false;
   }
   for (const el of $$('[data-icon]')) el.innerHTML = icon(el.dataset.icon);
   document.body.insertAdjacentHTML('beforeend', '<div id="popScrim" class="pop-scrim" hidden></div>');

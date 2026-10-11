@@ -24,6 +24,7 @@
     <kbd class="search-kbd" aria-hidden="true">/</kbd>
   </label>
   <div class="actions">
+    <button type="button" id="btnSearchImot" class="btn" data-server-only data-i18n-title="searchImot"><span data-icon="list-magnifying-glass" aria-hidden="true"></span><span class="btn-label" data-i18n="searchImot">Search imot.bg</span></button>
     <button type="button" id="btnImport" class="btn" data-server-only data-i18n-title="import"><span data-icon="cloud-arrow-down" aria-hidden="true"></span><span class="btn-label" data-i18n="import">Import</span></button>
     <div class="menu">
       <button type="button" id="btnMenu" class="btn icon" aria-haspopup="menu" aria-expanded="false" aria-controls="appMenu" data-i18n-title="moreActions"><span data-icon="dots-three" aria-hidden="true"></span></button>
@@ -91,16 +92,16 @@
       <details class="opts">
         <summary><span data-icon="sliders-horizontal" aria-hidden="true"></span><span data-i18n="importOptions">Import options</span><span class="opts-caret" data-icon="caret-down" aria-hidden="true"></span></summary>
         <div class="opts-body">
-          <label class="switch-row"><span class="sw-text"><span data-i18n="optDetails"></span><span class="sw-hint" data-i18n="optDetailsHint"></span></span><input type="checkbox" class="switch" role="switch" id="optDetails" checked></label>
-          <label class="switch-row"><span class="sw-text"><span data-i18n="optAutoSplit"></span><span class="sw-hint" data-i18n="optAutoSplitHint"></span></span><input type="checkbox" class="switch" role="switch" id="optSplit" checked></label>
-          <label class="switch-row"><span class="sw-text"><span data-i18n="optGeocode"></span><span class="sw-hint" data-i18n="optGeocodeHint"></span></span><input type="checkbox" class="switch" role="switch" id="optGeocode" checked></label>
+          <label class="switch-row"><span class="sw-text"><span data-i18n="optDetails"></span><span class="sw-hint" data-i18n="optDetailsHint"></span></span><input type="checkbox" class="switch" role="switch" id="optDetails" data-opt="details" checked></label>
+          <label class="switch-row"><span class="sw-text"><span data-i18n="optAutoSplit"></span><span class="sw-hint" data-i18n="optAutoSplitHint"></span></span><input type="checkbox" class="switch" role="switch" id="optSplit" data-opt="autoSplit" checked></label>
+          <label class="switch-row"><span class="sw-text"><span data-i18n="optGeocode"></span><span class="sw-hint" data-i18n="optGeocodeHint"></span></span><input type="checkbox" class="switch" role="switch" id="optGeocode" data-opt="geocodeOnline" checked></label>
         </div>
       </details>
       <div class="imp-actions">
         <button type="button" id="btnStart" class="btn primary"><span data-icon="cloud-arrow-down" aria-hidden="true"></span><span data-i18n="startImport">Start import</span></button>
         <button type="button" id="btnCancel" class="btn" hidden><span data-i18n="cancelImport">Cancel</span></button>
       </div>
-      <div id="jobView" class="job"></div>
+      <div id="jobView" class="job" data-job-view></div>
     </section>
     <section class="imp-sources" aria-labelledby="sourcesTitle">
       <div class="sources-head">
@@ -114,6 +115,37 @@
       <button type="button" id="btnDeleteAll" class="btn small ghost danger"><span data-icon="trash" aria-hidden="true"></span><span data-i18n="deleteAll">Delete all data</span></button>
     </div>
   </div>
+</dialog>
+
+<dialog id="searchDlg" class="dlg search-dlg" aria-labelledby="searchTitle" data-server-only>
+  <header class="dlg-head">
+    <h2 id="searchTitle" data-i18n="searchImot">Search imot.bg</h2>
+    <button type="button" class="btn icon ghost" data-dismiss data-i18n-title="close"><span data-icon="x" aria-hidden="true"></span></button>
+  </header>
+  <form id="searchForm" class="dlg-body sf" novalidate autocomplete="off">
+    <p class="sf-intro" data-i18n="sfIntro"></p>
+    <div id="sfFields" class="sf-fields"></div>
+    <details class="opts">
+      <summary><span data-icon="sliders-horizontal" aria-hidden="true"></span><span data-i18n="importOptions">Import options</span><span class="opts-caret" data-icon="caret-down" aria-hidden="true"></span></summary>
+      <div class="opts-body">
+        <label class="switch-row"><span class="sw-text"><span data-i18n="optDetails"></span><span class="sw-hint" data-i18n="optDetailsHint"></span></span><input type="checkbox" class="switch" role="switch" data-opt="details" checked></label>
+        <label class="switch-row"><span class="sw-text"><span data-i18n="optAutoSplit"></span><span class="sw-hint" data-i18n="optAutoSplitHint"></span></span><input type="checkbox" class="switch" role="switch" data-opt="autoSplit" checked></label>
+        <label class="switch-row"><span class="sw-text"><span data-i18n="optGeocode"></span><span class="sw-hint" data-i18n="optGeocodeHint"></span></span><input type="checkbox" class="switch" role="switch" data-opt="geocodeOnline" checked></label>
+      </div>
+    </details>
+  </form>
+  <div id="sfProgress" class="dlg-body sf-progress" tabindex="-1" hidden>
+    <div id="sfSearchInfo" class="sf-info"></div>
+    <div class="job" data-job-view></div>
+  </div>
+  <footer class="dlg-foot">
+    <p id="sfNote" class="sf-note" aria-live="polite"></p>
+    <button type="button" id="sfReset" class="btn ghost" data-i18n="clear">Clear</button>
+    <button type="submit" id="sfGo" class="btn primary" form="searchForm"><span data-icon="list-magnifying-glass" aria-hidden="true"></span><span data-i18n="sfGo">Search and import</span></button>
+    <button type="button" id="sfEdit" class="btn" hidden><span data-icon="caret-left" aria-hidden="true"></span><span data-i18n="sfEdit">Edit search</span></button>
+    <button type="button" id="sfCancel" class="btn" hidden data-i18n="cancelImport">Cancel</button>
+    <button type="button" id="sfShow" class="btn primary" hidden data-i18n="sfShow">Show listings</button>
+  </footer>
 </dialog>
 
 <dialog id="aboutDlg" class="dlg about" aria-labelledby="aboutTitle">

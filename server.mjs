@@ -14,6 +14,7 @@ import { Gazetteer } from './lib/gazetteer.mjs';
 import { Geocoder } from './lib/geocode.mjs';
 import { ImportJob, DEFAULT_OPTIONS } from './lib/importer.mjs';
 import { buildStandaloneHtml } from './lib/export.mjs';
+import { ImotSearch } from './lib/searchform.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -28,6 +29,7 @@ const DATA_DIR = path.resolve(arg('data', path.join(ROOT, 'data')));
 const store = await new Store(path.join(DATA_DIR, 'listings.json')).load();
 const gazetteer = new Gazetteer();
 const geocoder = await new Geocoder({ cacheFile: path.join(DATA_DIR, 'geocache.json') }).load();
+const imotSearch = new ImotSearch();
 let currentJob = null;
 let lastJob = null;
 
@@ -90,6 +92,26 @@ async function serveStatic(req, res, pathname) {
   send(res, 404, 'Not found');
 }
 
+function startJob(inputs, rawOptions) {
+  // Checked and claimed without awaiting in between, so two requests can't both start a job.
+  if (currentJob) throw Object.assign(new Error('An import is already running'), { status: 409 });
+  const options = {};
+  for (const k of ['details', 'autoSplit', 'geocodeOnline']) if (typeof rawOptions?.[k] === 'boolean') options[k] = rawOptions[k];
+  geocoder.enabled = options.geocodeOnline ?? DEFAULT_OPTIONS.geocodeOnline;
+  const job = new ImportJob({ inputs, options, store, gazetteer, geocoder });
+  currentJob = job;
+  job.run().finally(() => { lastJob = job; currentJob = null; });
+  return job;
+}
+
+/** imot.bg answered, but not usefully (blocked, changed markup): a gateway error, not a bad request. */
+async function fromImot(fn) {
+  try { return await fn(); } catch (err) {
+    if (err.code === 'badRequest') throw err;
+    throw Object.assign(new Error(err.message), { status: 502, code: err.code });
+  }
+}
+
 function listingsPayload() {
   return {
     listings: store.listings,
@@ -115,13 +137,23 @@ const routes = {
     // Every pasted token goes to the job, so non-imot.bg links are reported as skipped rather than vanishing.
     const inputs = [...new Set(raw.split(/\s+/).map((s) => s.trim()).filter(Boolean))].slice(0, 200);
     if (!inputs.some((s) => /imot\.bg/i.test(s))) return [400, { error: 'Paste at least one imot.bg link' }];
-    const options = {};
-    for (const k of ['details', 'autoSplit', 'geocodeOnline']) if (typeof body.options?.[k] === 'boolean') options[k] = body.options[k];
-    geocoder.enabled = options.geocodeOnline ?? DEFAULT_OPTIONS.geocodeOnline;
-    const job = new ImportJob({ inputs, options, store, gazetteer, geocoder });
-    currentJob = job;
-    job.run().finally(() => { lastJob = job; currentJob = null; });
-    return { job: job.state };
+    return { job: startJob(inputs, body.options).state };
+  },
+
+  // Option lists of imot.bg's own search form, for the "Search imot.bg" dialog.
+  'GET /api/search-form': async (req, url) => {
+    const deal = url.searchParams.get('deal') || 'sale';
+    const location = url.searchParams.get('location') || '';
+    return { form: await fromImot(() => imotSearch.form(deal, location)) };
+  },
+
+  // Turn a filled-in search form into an imot.bg search link and import it.
+  'POST /api/search': async (req) => {
+    if (currentJob) return [409, { error: 'An import is already running' }];
+    const body = await readJson(req);
+    const url = await fromImot(() => imotSearch.searchUrl(body.query || {}));
+    await store.reloadIfChanged();
+    return { url, job: startJob([url], body.options).state };
   },
 
   'POST /api/job/cancel': async () => {
@@ -171,7 +203,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
     return await serveStatic(req, res, url.pathname);
   } catch (err) {
-    send(res, err.status || 500, { error: err.message });
+    send(res, err.status || 500, { error: err.message, code: err.code });
   }
 });
 
