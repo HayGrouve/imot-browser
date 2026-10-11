@@ -187,6 +187,7 @@ export const STRINGS = {
 <li><strong>Search links are replayed, not opened as-is.</strong> Parameters such as <code>plnk</code> and <code>slink</code> belong to the browser session that created them; from any other session imot.bg answers “page not found”. They are removed automatically and the search is rebuilt from the path (<code>/obiavi/prodazhbi/oblast-sofiya/kashta</code>) and the visible filters (<code>price_min</code>, <code>price_max</code>, …). Filters that exist only inside the session and are not in the URL are lost — compare the “filters reported by imot.bg” line of each imported search with what you expect.</li>
 <li>Old-style links (<code>pcgi/imot.cgi?act=3&amp;slink=…</code>) cannot be replayed at all. Mobile links (<code>m.imot.bg</code>) are converted to the desktop site.</li>
 <li><strong>imot.bg shows at most 1,000 results per search</strong> (25 pages × 40). Larger searches are split automatically into price bands. Listings with no price (“price on request”) do not match price filters, so they can be missed in split searches.</li>
+<li>Some ads quote prices without VAT (marked “+VAT” in the table), while imot.bg filters searches on the VAT-inclusive price — so they can appear below your search’s minimum price.</li>
 </ul>
 <h3>Data</h3>
 <ul>
@@ -389,6 +390,7 @@ export const STRINGS = {
 <li><strong>Търсенията се изпълняват наново, а не се отварят буквално.</strong> Параметри като <code>plnk</code> и <code>slink</code> принадлежат на сесията на браузъра, в която са създадени; от друга сесия imot.bg връща „страницата не е намерена“. Те се премахват автоматично и търсенето се възстановява от пътя (<code>/obiavi/prodazhbi/oblast-sofiya/kashta</code>) и видимите филтри (<code>price_min</code>, <code>price_max</code>, …). Филтри, които съществуват само в сесията и ги няма в адреса, се губят — сравнете реда „филтри според imot.bg“ на всяко импортирано търсене с очакваното.</li>
 <li>Старите линкове (<code>pcgi/imot.cgi?act=3&amp;slink=…</code>) не могат да се повторят. Мобилните линкове (<code>m.imot.bg</code>) се преобразуват към основния сайт.</li>
 <li><strong>imot.bg показва най-много 1000 резултата на търсене</strong> (25 страници × 40). По-големите търсения автоматично се разделят на ценови диапазони. Обявите без цена („при запитване“) не попадат в ценовите филтри и могат да липсват при разделени търсения.</li>
+<li>Някои обяви са с цена без ДДС (отбелязани „+ДДС“ в таблицата), а imot.bg филтрира търсенията по цената с ДДС — затова може да са под минималната цена на търсенето.</li>
 </ul>
 <h3>Данни</h3>
 <ul>
