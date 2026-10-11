@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>imot.bg browser</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c5cab'/%3E%3Cpath d='M7 16 16 8l9 8v9h-6v-6h-6v6H7z' fill='white'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true"></span>
+    <h1 data-i18n="appTitle">imot.bg browser</h1>
+    <span id="stats" class="stats"></span>
+  </div>
+  <div class="actions">
+    <button type="button" id="btnImport" class="btn primary" data-server-only data-i18n="import">Import</button>
+    <div class="menu">
+      <button type="button" id="btnExport" class="btn" aria-haspopup="true" aria-expanded="false" aria-controls="exportMenu"><span data-i18n="export">Export</span> <span aria-hidden="true">▾</span></button>
+      <div class="menu-list" id="exportMenu" hidden>
+        <button type="button" id="btnCsv" data-i18n="exportCsv">CSV</button>
+        <button type="button" id="btnHtml" data-server-only data-i18n="exportHtml">HTML</button>
+      </div>
+    </div>
+    <button type="button" id="btnAbout" class="btn" data-i18n="about">Limitations</button>
+    <button type="button" id="btnLang" class="btn lang">БГ</button>
+  </div>
+</header>
+<div id="banner" class="banner" hidden></div>
+
+<main class="layout">
+  <section class="list-pane" aria-label="Listings">
+    <form class="filters" id="filters" autocomplete="off" onsubmit="return false">
+      <input type="search" id="fQ" class="q" data-i18n-placeholder="searchPlaceholder" aria-label="Search">
+      <div class="row selects">
+        <select id="fDeal" aria-label="Deal"></select>
+        <select id="fType" aria-label="Type"></select>
+        <select id="fOblast" aria-label="Province"></select>
+        <select id="fPlace" aria-label="Place"></select>
+      </div>
+      <div class="row nums">
+        <label><span data-i18n="priceMin"></span><input id="fPriceMin" type="number" min="0" step="5000" inputmode="numeric"></label>
+        <label><span data-i18n="priceMax"></span><input id="fPriceMax" type="number" min="0" step="5000" inputmode="numeric"></label>
+        <label><span data-i18n="areaMin"></span><input id="fAreaMin" type="number" min="0" step="10" inputmode="numeric"></label>
+        <label><span data-i18n="areaMax"></span><input id="fAreaMax" type="number" min="0" step="10" inputmode="numeric"></label>
+        <label><span data-i18n="yardMin"></span><input id="fYardMin" type="number" min="0" step="100" inputmode="numeric"></label>
+      </div>
+      <div class="row toggles">
+        <label class="check"><input type="checkbox" id="fStarred"> <span data-i18n="onlyStarred"></span></label>
+        <label class="check" id="fNewWrap"><input type="checkbox" id="fNew"> <span data-i18n="onlyNew"></span></label>
+        <label class="check" id="fStaleWrap"><input type="checkbox" id="fHideStale"> <span data-i18n="hideStale"></span></label>
+        <button type="button" id="btnReset" class="btn link" data-i18n="reset">Reset</button>
+      </div>
+    </form>
+    <div class="resultbar">
+      <span id="count" aria-live="polite"></span>
+      <span id="placeChip" class="chip place-chip" hidden></span>
+    </div>
+    <div class="table-wrap">
+      <table id="table">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+      <div id="emptyMsg" class="empty" hidden></div>
+    </div>
+    <nav class="pager" id="pager" aria-label="Pagination"></nav>
+  </section>
+
+  <section class="map-pane" aria-label="Map">
+    <div id="map"></div>
+    <div id="unmapped" class="map-note" hidden></div>
+  </section>
+</main>
+
+<dialog id="detailDlg" class="dlg detail" aria-labelledby="detailTitle">
+  <header id="detailHead" class="dlg-head"></header>
+  <div id="detailBody" class="dlg-body"></div>
+</dialog>
+
+<dialog id="importDlg" class="dlg import" aria-labelledby="importTitle" data-server-only>
+  <header class="dlg-head">
+    <h2 id="importTitle" data-i18n="importTitle">Import</h2>
+    <button type="button" class="btn icon" data-dismiss data-i18n-title="close">✕</button>
+  </header>
+  <div class="dlg-body">
+    <p class="muted" data-i18n="importHelp"></p>
+    <textarea id="importInput" rows="4" spellcheck="false" data-i18n-placeholder="importPlaceholder" aria-labelledby="importTitle"></textarea>
+    <fieldset class="opts">
+      <label class="check"><input type="checkbox" id="optDetails" checked> <span data-i18n="optDetails"></span></label>
+      <label class="check"><input type="checkbox" id="optSplit" checked> <span data-i18n="optAutoSplit"></span></label>
+      <label class="check"><input type="checkbox" id="optGeocode" checked> <span data-i18n="optGeocode"></span></label>
+    </fieldset>
+    <div class="row">
+      <button type="button" id="btnStart" class="btn primary" data-i18n="startImport">Start</button>
+      <button type="button" id="btnCancel" class="btn" data-i18n="cancelImport" hidden>Cancel</button>
+    </div>
+    <div id="jobView" class="job"></div>
+    <div class="sources-head">
+      <h3 data-i18n="sourcesTitle">Imported searches</h3>
+      <button type="button" id="btnReimportAll" class="btn small" data-i18n="reimportAll" hidden>Re-import all</button>
+    </div>
+    <div id="sourcesList"></div>
+    <div class="danger-zone">
+      <button type="button" id="btnDeleteAll" class="btn small danger" data-i18n="deleteAll">Delete all</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="aboutDlg" class="dlg about" aria-labelledby="aboutTitle">
+  <header class="dlg-head">
+    <h2 id="aboutTitle" data-i18n="aboutTitle">Limitations</h2>
+    <button type="button" class="btn icon" data-dismiss data-i18n-title="close">✕</button>
+  </header>
+  <div class="dlg-body prose" data-i18n-html="aboutHtml"></div>
+</dialog>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script type="module" src="app.mjs"></script>
+</body>
+</html>
