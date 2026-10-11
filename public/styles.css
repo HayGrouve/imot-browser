@@ -251,13 +251,17 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: now
 .pop-title { font-weight: 700; font-size: 15px; }
 .pop-sub { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
 .pop-stats { font-size: 12px; margin-bottom: 6px; color: var(--text-2); }
-.pop-list { list-style: none; margin: 0 0 8px; padding: 0; max-height: 220px; overflow: auto; }
+.pop-list { list-style: none; margin: 0 0 8px; padding: 0; max-height: 280px; overflow: auto; }
 .pop-list button {
-  width: 100%; display: flex; justify-content: space-between; gap: 10px; text-align: left;
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left;
   border: 0; border-bottom: 1px solid var(--border); background: none; padding: 5px 2px; cursor: pointer; font-size: 12px;
 }
 .pop-list button:hover { background: var(--row-hover); }
 .pop-list b { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pop-list img, .pop-nophoto {
+  width: 48px; height: 36px; flex: 0 0 auto; object-fit: cover; border-radius: 4px; background: var(--surface-2);
+}
+.pop-desc { flex: 1; min-width: 0; }
 .pop-list .more { font-size: 12px; color: var(--muted); padding: 4px 2px; }
 .pop-note { margin-top: 8px; font-size: 11px; color: var(--muted); }
 

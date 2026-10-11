@@ -62,6 +62,8 @@ const fmtDate = (iso, withTime = false) => {
   return d.toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric', ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}) });
 };
 const thumbOf = (url) => (url ? url.replace(/\/big1?\//, '/') : null);
+/** Small photo for a listing (search-card thumbnail, else the first gallery photo scaled down). */
+const thumbFor = (l) => safeUrl(l.thumb) || safeUrl(thumbOf(l.photos?.[0]));
 
 const KIND_PREFIX_BG = { city: 'гр.', town: 'гр.', village: 'с.', resort: 'к.к.', locality: 'м-т', villaZone: 'в.з.' };
 const KIND_EN = { city: 'city', town: 'town', village: 'village', resort: 'resort', locality: 'locality', villaZone: 'villa zone' };
@@ -355,7 +357,7 @@ function sellerText(l) {
 
 function rowHtml(l) {
   const starred = stars.has(l.id);
-  const thumb = safeUrl(l.thumb) || safeUrl(thumbOf(l.photos?.[0]));
+  const thumb = thumbFor(l);
   const url = safeUrl(l.url);
   const lang = getLang();
   const viaHood = l.place?.via === 'neighborhood';
@@ -518,7 +520,9 @@ function popupHtml(g) {
   const lang = getLang();
   const rows = shown.map((l) => {
     const bits = [typeLabel(l.type, l.typeBg, lang, true), l.area ? `${fmtNum(l.area)} m²` : '', l.yard ? `${t('colYard').replace(/ m²| м²/, '')} ${fmtNum(l.yard)}` : ''].filter(Boolean).join(' · ');
-    return `<li><button type="button" data-open="${esc(l.id)}"><span>${esc(bits)}</span><b>${esc(l.price != null ? fmtMoney(l.price, l.currency || 'EUR') : '—')}</b></button></li>`;
+    const thumb = thumbFor(l);
+    const img = thumb ? `<img loading="lazy" src="${esc(thumb)}" alt="" width="48" height="36">` : '<span class="pop-nophoto" aria-hidden="true"></span>';
+    return `<li><button type="button" data-open="${esc(l.id)}">${img}<span class="pop-desc">${esc(bits)}</span><b>${esc(l.price != null ? fmtMoney(l.price, l.currency || 'EUR') : '—')}</b></button></li>`;
   }).join('');
   const more = items.length > shown.length ? `<li class="more">${esc(t('popupMore', { n: items.length - shown.length }))}</li>` : '';
   return `<div class="pop">
@@ -552,7 +556,8 @@ function renderMap() {
       popupAnchor: [0, -size / 2],
     });
     const m = L.marker([g.lat, g.lon], { icon, title: `${groupTitle(g)} — ${t('popupCount', { n })}`, alt: groupTitle(g), riseOnHover: true });
-    m.bindPopup(() => popupHtml(g), { maxWidth: 340, minWidth: 260, autoPanPadding: [30, 30] });
+    // Extra top clearance so the popup isn't tucked under the "Group by" control.
+    m.bindPopup(() => popupHtml(g), { maxWidth: 340, minWidth: 260, autoPanPaddingTopLeft: [20, 70], autoPanPaddingBottomRight: [20, 20] });
     m.addTo(S.layer);
     S.markerByKey.set(g.key, m);
   }
