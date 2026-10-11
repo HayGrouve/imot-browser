@@ -2,7 +2,7 @@
   "name": "imot-browser",
   "version": "1.0.0",
   "private": true,
-  "description": "Local browser for imot.bg real-estate listings: import search links, browse a sortable table and a map grouped by city/village (EN/BG).",
+  "description": "Local browser for imot.bg real-estate listings: import search links, browse them as a filterable list and a map grouped by city/village (EN/BG).",
   "type": "module",
   "engines": { "node": ">=20" },
   "scripts": {

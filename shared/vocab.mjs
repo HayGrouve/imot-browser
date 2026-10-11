@@ -122,6 +122,7 @@ export const TERMS = {
   'Цената е без ДДС': 'Price excludes VAT',
   'Не се начислява ДДС': 'No VAT charged',
   'Цената е с ДДС': 'Price includes VAT',
+  'Цената е с включено ДДС': 'Price includes VAT',
 };
 
 export function term(bg, lang) {

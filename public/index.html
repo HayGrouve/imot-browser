@@ -2,79 +2,77 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fcfcfc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#131316" media="(prefers-color-scheme: dark)">
 <title>imot.bg browser</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231c5cab'/%3E%3Cpath d='M7 16 16 8l9 8v9h-6v-6h-6v6H7z' fill='white'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2318181b'/%3E%3Cpath d='M8 15.5 16 8.5l8 7V24h-5.5v-5h-5v5H8z' fill='%23fafafa'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <header class="topbar">
   <div class="brand">
-    <span class="logo" aria-hidden="true"></span>
-    <h1 data-i18n="appTitle">imot.bg browser</h1>
-    <span id="stats" class="stats"></span>
+    <span class="logo" data-icon="house-simple-fill" aria-hidden="true"></span>
+    <h1 class="brand-name" data-i18n="appTitle">imot.bg browser</h1>
   </div>
+  <label class="search">
+    <span class="search-icon" data-icon="magnifying-glass" aria-hidden="true"></span>
+    <span class="sr-only" data-i18n="searchLabel">Search</span>
+    <input type="search" id="fQ" data-i18n-placeholder="searchPlaceholder" autocomplete="off" spellcheck="false">
+    <kbd class="search-kbd" aria-hidden="true">/</kbd>
+  </label>
   <div class="actions">
-    <button type="button" id="btnImport" class="btn primary" data-server-only data-i18n="import">Import</button>
+    <button type="button" id="btnImport" class="btn" data-server-only data-i18n-title="import"><span data-icon="cloud-arrow-down" aria-hidden="true"></span><span class="btn-label" data-i18n="import">Import</span></button>
     <div class="menu">
-      <button type="button" id="btnExport" class="btn" aria-haspopup="true" aria-expanded="false" aria-controls="exportMenu"><span data-i18n="export">Export</span> <span aria-hidden="true">▾</span></button>
-      <div class="menu-list" id="exportMenu" hidden>
-        <button type="button" id="btnCsv" data-i18n="exportCsv">CSV</button>
-        <button type="button" id="btnHtml" data-server-only data-i18n="exportHtml">HTML</button>
+      <button type="button" id="btnMenu" class="btn icon" aria-haspopup="menu" aria-expanded="false" aria-controls="appMenu" data-i18n-title="moreActions"><span data-icon="dots-three" aria-hidden="true"></span></button>
+      <div class="menu-list" id="appMenu" role="menu" hidden>
+        <button type="button" role="menuitem" id="btnCsv"><span data-icon="file-csv" aria-hidden="true"></span><span data-i18n="exportCsv">CSV</span></button>
+        <button type="button" role="menuitem" id="btnHtml" data-server-only><span data-icon="file-html" aria-hidden="true"></span><span data-i18n="exportHtml">HTML</span></button>
+        <hr>
+        <button type="button" role="menuitem" id="btnLang"><span data-icon="translate" aria-hidden="true"></span><span id="btnLangLabel"></span></button>
+        <button type="button" role="menuitem" id="btnAbout"><span data-icon="info" aria-hidden="true"></span><span data-i18n="about">How it works</span></button>
       </div>
     </div>
-    <button type="button" id="btnAbout" class="btn" data-i18n="about">Limitations</button>
-    <button type="button" id="btnLang" class="btn lang">БГ</button>
   </div>
 </header>
 <div id="banner" class="banner" hidden></div>
 
 <main class="layout">
-  <section class="list-pane" aria-label="Listings">
-    <form class="filters" id="filters" autocomplete="off" onsubmit="return false">
-      <input type="search" id="fQ" class="q" data-i18n-placeholder="searchPlaceholder" aria-label="Search">
-      <div class="row selects">
-        <select id="fDeal" aria-label="Deal"></select>
-        <select id="fType" aria-label="Type"></select>
-        <select id="fOblast" aria-label="Province"></select>
-        <select id="fPlace" aria-label="Place"></select>
-      </div>
-      <div class="row nums">
-        <label><span data-i18n="priceMin"></span><input id="fPriceMin" type="number" min="0" step="5000" inputmode="numeric"></label>
-        <label><span data-i18n="priceMax"></span><input id="fPriceMax" type="number" min="0" step="5000" inputmode="numeric"></label>
-        <label><span data-i18n="areaMin"></span><input id="fAreaMin" type="number" min="0" step="10" inputmode="numeric"></label>
-        <label><span data-i18n="areaMax"></span><input id="fAreaMax" type="number" min="0" step="10" inputmode="numeric"></label>
-        <label><span data-i18n="yardMin"></span><input id="fYardMin" type="number" min="0" step="100" inputmode="numeric"></label>
-      </div>
-      <div class="row toggles">
-        <label class="check"><input type="checkbox" id="fStarred"> <span data-i18n="onlyStarred"></span></label>
-        <label class="check" id="fNewWrap"><input type="checkbox" id="fNew"> <span data-i18n="onlyNew"></span></label>
-        <label class="check" id="fStaleWrap"><input type="checkbox" id="fHideStale"> <span data-i18n="hideStale"></span></label>
-        <label class="check" id="fUnmappedWrap"><input type="checkbox" id="fUnmapped"> <span id="fUnmappedLabel"></span></label>
-        <button type="button" id="btnReset" class="btn link" data-i18n="reset">Reset</button>
-      </div>
-    </form>
-    <div class="resultbar">
-      <span id="count" aria-live="polite"></span>
-      <span id="placeChip" class="chip place-chip" hidden></span>
+  <section class="list-pane" aria-labelledby="count">
+    <div class="toolbar">
+      <a class="skip-link" href="#map" data-i18n="skipToMap">Skip to map</a>
+      <div class="pills" id="pills" role="group" data-i18n-aria="filters"></div>
     </div>
-    <div class="table-wrap">
-      <table id="table">
-        <thead></thead>
-        <tbody></tbody>
-      </table>
+    <div class="list-scroll" id="listScroll">
+      <div class="resultbar">
+        <h2 id="count" class="count" aria-live="polite"></h2>
+        <label class="sort-ctl">
+          <span class="sr-only" data-i18n="sortLabel">Sort</span>
+          <span data-icon="arrows-down-up" aria-hidden="true"></span>
+          <select id="sortSel"></select>
+          <span class="sort-caret" data-icon="caret-down" aria-hidden="true"></span>
+        </label>
+      </div>
+      <ol class="results" id="results">
+        <li class="row skeleton" aria-hidden="true"><div class="row-media"></div><div class="row-main"><span></span><span></span><span></span></div></li>
+        <li class="row skeleton" aria-hidden="true"><div class="row-media"></div><div class="row-main"><span></span><span></span><span></span></div></li>
+        <li class="row skeleton" aria-hidden="true"><div class="row-media"></div><div class="row-main"><span></span><span></span><span></span></div></li>
+        <li class="row skeleton" aria-hidden="true"><div class="row-media"></div><div class="row-main"><span></span><span></span><span></span></div></li>
+      </ol>
       <div id="emptyMsg" class="empty" hidden></div>
+      <div class="more" id="more"></div>
     </div>
-    <nav class="pager" id="pager" aria-label="Pagination"></nav>
   </section>
 
-  <section class="map-pane" aria-label="Map">
+  <section class="map-pane" data-i18n-aria="viewMap">
     <div id="map"></div>
-    <button type="button" id="unmapped" class="map-note" aria-pressed="false" hidden></button>
   </section>
 </main>
+
+<button type="button" id="viewToggle" class="view-toggle"></button>
+<div id="pop" class="pop-panel" role="dialog" hidden></div>
 
 <dialog id="detailDlg" class="dlg detail" aria-labelledby="detailTitle">
   <header id="detailHead" class="dlg-head"></header>
@@ -84,28 +82,36 @@
 <dialog id="importDlg" class="dlg import" aria-labelledby="importTitle" data-server-only>
   <header class="dlg-head">
     <h2 id="importTitle" data-i18n="importTitle">Import</h2>
-    <button type="button" class="btn icon" data-dismiss data-i18n-title="close">✕</button>
+    <button type="button" class="btn icon ghost" data-dismiss data-i18n-title="close"><span data-icon="x" aria-hidden="true"></span></button>
   </header>
   <div class="dlg-body">
-    <p class="muted" data-i18n="importHelp"></p>
-    <textarea id="importInput" rows="4" spellcheck="false" data-i18n-placeholder="importPlaceholder" aria-labelledby="importTitle"></textarea>
-    <fieldset class="opts">
-      <label class="check"><input type="checkbox" id="optDetails" checked> <span data-i18n="optDetails"></span></label>
-      <label class="check"><input type="checkbox" id="optSplit" checked> <span data-i18n="optAutoSplit"></span></label>
-      <label class="check"><input type="checkbox" id="optGeocode" checked> <span data-i18n="optGeocode"></span></label>
-    </fieldset>
-    <div class="row">
-      <button type="button" id="btnStart" class="btn primary" data-i18n="startImport">Start</button>
-      <button type="button" id="btnCancel" class="btn" data-i18n="cancelImport" hidden>Cancel</button>
-    </div>
-    <div id="jobView" class="job"></div>
-    <div class="sources-head">
-      <h3 data-i18n="sourcesTitle">Imported searches</h3>
-      <button type="button" id="btnReimportAll" class="btn small" data-i18n="reimportAll" hidden>Re-import all</button>
-    </div>
-    <div id="sourcesList"></div>
+    <section class="imp-new">
+      <p class="imp-help" id="importHelp" data-i18n="importHelp"></p>
+      <textarea id="importInput" rows="4" spellcheck="false" autocomplete="off" data-i18n-placeholder="importPlaceholder" aria-labelledby="importTitle" aria-describedby="importHelp"></textarea>
+      <details class="opts">
+        <summary><span data-icon="sliders-horizontal" aria-hidden="true"></span><span data-i18n="importOptions">Import options</span><span class="opts-caret" data-icon="caret-down" aria-hidden="true"></span></summary>
+        <div class="opts-body">
+          <label class="switch-row"><span class="sw-text"><span data-i18n="optDetails"></span><span class="sw-hint" data-i18n="optDetailsHint"></span></span><input type="checkbox" class="switch" role="switch" id="optDetails" checked></label>
+          <label class="switch-row"><span class="sw-text"><span data-i18n="optAutoSplit"></span><span class="sw-hint" data-i18n="optAutoSplitHint"></span></span><input type="checkbox" class="switch" role="switch" id="optSplit" checked></label>
+          <label class="switch-row"><span class="sw-text"><span data-i18n="optGeocode"></span><span class="sw-hint" data-i18n="optGeocodeHint"></span></span><input type="checkbox" class="switch" role="switch" id="optGeocode" checked></label>
+        </div>
+      </details>
+      <div class="imp-actions">
+        <button type="button" id="btnStart" class="btn primary"><span data-icon="cloud-arrow-down" aria-hidden="true"></span><span data-i18n="startImport">Start import</span></button>
+        <button type="button" id="btnCancel" class="btn" hidden><span data-i18n="cancelImport">Cancel</span></button>
+      </div>
+      <div id="jobView" class="job"></div>
+    </section>
+    <section class="imp-sources" aria-labelledby="sourcesTitle">
+      <div class="sources-head">
+        <h3 id="sourcesTitle" data-i18n="sourcesTitle">Imported searches</h3>
+        <button type="button" id="btnReimportAll" class="btn small" hidden><span data-icon="arrow-clockwise" aria-hidden="true"></span><span data-i18n="reimportAll">Re-import all</span></button>
+      </div>
+      <div id="sourcesList"></div>
+    </section>
     <div class="danger-zone">
-      <button type="button" id="btnDeleteAll" class="btn small danger" data-i18n="deleteAll">Delete all</button>
+      <p data-i18n="deleteAllHint"></p>
+      <button type="button" id="btnDeleteAll" class="btn small ghost danger"><span data-icon="trash" aria-hidden="true"></span><span data-i18n="deleteAll">Delete all data</span></button>
     </div>
   </div>
 </dialog>
@@ -113,9 +119,11 @@
 <dialog id="aboutDlg" class="dlg about" aria-labelledby="aboutTitle">
   <header class="dlg-head">
     <h2 id="aboutTitle" data-i18n="aboutTitle">Limitations</h2>
-    <button type="button" class="btn icon" data-dismiss data-i18n-title="close">✕</button>
+    <button type="button" class="btn icon ghost" data-dismiss data-i18n-title="close"><span data-icon="x" aria-hidden="true"></span></button>
   </header>
-  <div class="dlg-body prose" data-i18n-html="aboutHtml"></div>
+  <div class="dlg-body" tabindex="0">
+    <div class="prose" data-i18n-html="aboutHtml"></div>
+  </div>
 </dialog>
 
 <script src="vendor/leaflet/leaflet.js"></script>

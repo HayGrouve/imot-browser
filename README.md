@@ -1,10 +1,10 @@
 # imot.bg browser
 
 A local, bilingual (English / Bulgarian) browser for real-estate listings from [imot.bg](https://www.imot.bg).
-Paste search links, and it imports every listing behind them into a searchable, sortable table and an
+Paste search links, and it imports every listing behind them into a searchable, sortable list and an
 interactive map grouped by city / village, with full listing details and links back to the originals.
 
-No dependencies beyond Node.js — no `npm install` needed.
+No dependencies beyond Node.js, so there is no `npm install` step.
 
 ## Quick start
 
@@ -44,23 +44,28 @@ The CLI and the server share `data/`. The server picks up changes made by the CL
 
 ## Features
 
-- **Table**: full-text search (Latin or Cyrillic, so `bov` finds `Бов`), sort by any column, filters for
-  property type, place, province, price, area and yard, starred-only, “new since last import”,
-  “hide no longer listed”, and “only listings not on the map” (also toggled by clicking the map's
-  “could not be placed” note). Columns collapse on narrow screens.
-- **Map** (Leaflet + OpenStreetMap): one circle per city/village (or per neighbourhood in big cities). Size shows
-  the number of listings, colour shows the median €/m². Click a circle for the place's listings, or filter the
-  table to it. Hovering a table row highlights its place on the map. Switch between map, satellite (with
-  roads and place names), terrain and light base maps, like in Google Maps.
-- **Listing details**: photo gallery, price and €/m², area, yard, floor, construction, heating, features,
-  full description, agency / broker / phone, price history across imports, a link to the original, and a
-  private note.
+- **Search and filters**: one search box (Latin or Cyrillic, so `bov` finds `Бов`; press `/` to jump to it)
+  and a row of filter pills: Type, Location, Price, Size, More and Starred. Each pill opens a small popover,
+  so only the filters you use take up space. More holds “new since last import”, “hide no longer listed” and
+  “only listings not on the map”.
+- **Listing list**: one row per listing with a photo, place, key facts and price, and a sort menu (price,
+  €/m², area, yard, year built, last update, place). More listings load as you scroll.
+- **Map** (Leaflet): one circle per city/village (or per neighbourhood in big cities). Size shows the number
+  of listings, colour shows the median €/m². Click a circle for the place's listings, or show them in the
+  list. Hovering a row highlights its place on the map. The map options panel switches the base map (Simple,
+  Map, Satellite with roads and place names, Terrain) and how markers are grouped. Simple is a quiet grey map
+  (Esri World Light / Dark Gray Canvas) that follows the system light or dark theme.
+- **Narrow screens** show the list or the map, with a floating switch between them.
+- **Listing details**: photo gallery, price and €/m², key facts (area, yard, floor, year built, heating,
+  construction), features, full description, agency, broker and phone, price history across imports, a link
+  to the original, and a private note. ←/→ step through photos, j/k (or PageUp/PageDown) through listings.
 - **English / Bulgarian** interface. Property types and common features are translated, and place names are
-  transliterated using the official Bulgarian system.
+  transliterated using the official Bulgarian system. Light and dark mode follow the system setting.
 - **Re-import** refreshes a search. Price changes are recorded, and listings that disappeared are flagged.
   Listing pages fetched in the last 3 days are reused, unless the price changed.
-- **Export** the filtered rows as CSV (UTF-8, opens in Excel), or the whole set as one **standalone HTML file**
-  that opens from disk without the server (read-only; map tiles and photos still need internet).
+- **Export** (in the ⋯ menu) the filtered listings as CSV (UTF-8, opens in Excel), or the whole set as one
+  **standalone HTML file** that opens from disk without the server (read-only; map tiles and photos still
+  need internet).
 - Stars and notes are kept in the browser (`localStorage`), not in the data file.
 
 ## Limitations of extracting data from imot.bg links
@@ -109,7 +114,7 @@ imot.bg has no public API, so the importer reads the same HTML pages a browser s
 
 Requests are spaced ~350 ms apart (at most 3 in flight) and retried with back-off. If imot.bg starts refusing
 requests (HTTP 403/429 or a Cloudflare challenge), the import stops and keeps what it has. A 500-listing search
-with details takes about 3–4 minutes (~550 requests). Use the data for personal research. The listings belong to
+with details takes about 3-4 minutes (~550 requests). Use the data for personal research. The listings belong to
 imot.bg and the advertisers.
 
 ## Layout
@@ -125,7 +130,7 @@ lib/geocode.mjs         Nominatim fallback with cache
 lib/store.mjs           data/listings.json persistence
 lib/export.mjs          standalone HTML bundler
 shared/                 code used by both server and browser (text helpers, vocabulary)
-public/                 the UI (index.html, app.mjs, i18n.mjs, styles.css, vendored Leaflet 1.9.4)
+public/                 the UI (index.html, app.mjs, i18n.mjs, icons.mjs, styles.css, vendored Leaflet 1.9.4 and Geist)
 scripts/build-gazetteer.mjs   regenerate lib/gazetteer-bg.json from GeoNames
 test/                   node:test suites with real-page fixtures
 ```
@@ -134,5 +139,7 @@ test/                   node:test suites with real-page fixtures
 
 Place data © [GeoNames](https://www.geonames.org) (CC BY 4.0). Map data and geocoding ©
 [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) (ODbL). Satellite imagery © Esri, Maxar,
-Earthstar Geographics; terrain © [OpenTopoMap](https://opentopomap.org) (CC-BY-SA); light map ©
-[CARTO](https://carto.com/attributions). [Leaflet](https://leafletjs.com) (BSD-2-Clause).
+Earthstar Geographics; terrain © [OpenTopoMap](https://opentopomap.org) (CC-BY-SA); simple map © Esri, HERE,
+Garmin and OpenStreetMap contributors (Esri World Light / Dark Gray Canvas, no API key needed).
+[Leaflet](https://leafletjs.com) (BSD-2-Clause). Icons: [Phosphor](https://phosphoricons.com) (MIT).
+Font: [Geist](https://vercel.com/font) (SIL Open Font License).
