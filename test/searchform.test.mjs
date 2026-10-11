@@ -61,6 +61,16 @@ test('search query -> imot.bg form fields', () => {
   });
 });
 
+test('amounts: whole numbers except the area; number-input notation; nonsense dropped', () => {
+  const p = buildSearchParams({ priceMin: '1e5', priceMax: '250000.6', areaMin: '65.456', ppmMax: '-5', yardMin: 'lots', areaMax: '1e12' });
+  assert.equal(p.f28, '100000');
+  assert.equal(p.f29, '250001');
+  assert.equal(p.f26, '65.46');
+  assert.equal(p.f44, undefined);
+  assert.equal(p.f45, undefined);
+  assert.equal(p.f27, undefined);
+});
+
 test('an empty query is a search of all sales; districts need a location', () => {
   assert.deepEqual(buildSearchParams({}), { act: '15', actsrc: '3', rub: '1', f1: '1' });
   assert.equal(buildSearchParams({ districts: ['Лозенец'] }).f40, undefined);

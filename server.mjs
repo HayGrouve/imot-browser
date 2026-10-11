@@ -93,6 +93,8 @@ async function serveStatic(req, res, pathname) {
 }
 
 function startJob(inputs, rawOptions) {
+  // Checked and claimed without awaiting in between, so two requests can't both start a job.
+  if (currentJob) throw Object.assign(new Error('An import is already running'), { status: 409 });
   const options = {};
   for (const k of ['details', 'autoSplit', 'geocodeOnline']) if (typeof rawOptions?.[k] === 'boolean') options[k] = rawOptions[k];
   geocoder.enabled = options.geocodeOnline ?? DEFAULT_OPTIONS.geocodeOnline;
@@ -102,11 +104,11 @@ function startJob(inputs, rawOptions) {
   return job;
 }
 
-/** imot.bg answered, but not usefully (blocked, changed markup): a gateway error, not ours. */
+/** imot.bg answered, but not usefully (blocked, changed markup): a gateway error, not a bad request. */
 async function fromImot(fn) {
   try { return await fn(); } catch (err) {
-    if (err.status === 400) throw err;
-    throw Object.assign(new Error(err.message), { status: 502 });
+    if (err.code === 'badRequest') throw err;
+    throw Object.assign(new Error(err.message), { status: 502, code: err.code });
   }
 }
 
@@ -150,7 +152,6 @@ const routes = {
     if (currentJob) return [409, { error: 'An import is already running' }];
     const body = await readJson(req);
     const url = await fromImot(() => imotSearch.searchUrl(body.query || {}));
-    if (currentJob) return [409, { error: 'An import is already running' }];
     await store.reloadIfChanged();
     return { url, job: startJob([url], body.options).state };
   },
@@ -202,7 +203,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
     return await serveStatic(req, res, url.pathname);
   } catch (err) {
-    send(res, err.status || 500, { error: err.message });
+    send(res, err.status || 500, { error: err.message, code: err.code });
   }
 });
 

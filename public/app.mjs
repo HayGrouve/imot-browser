@@ -149,7 +149,7 @@ async function api(path, { method = 'GET', body } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+  if (!res.ok) throw Object.assign(new Error(json.error || `HTTP ${res.status}`), { status: res.status, code: json.code });
   return json;
 }
 
@@ -1324,11 +1324,11 @@ const SEARCH_QUERY = {
 };
 const SF_FIELDS = ['location', 'priceMin', 'priceMax', 'currency', 'ppmMin', 'ppmMax', 'areaMin', 'areaMax', 'floorFrom', 'floorTo',
   'sort', 'keyword', 'yardMin', 'yardMax', 'yearFrom', 'yearTo'];
-const SF_EXTRAS = ['extritb', 'extri1', 'extrip'];
 // Form labels that are not listing types of their own.
 const SF_TYPE_LABELS = { 'СТАЯ': ['Room', 'Стая'], 'МЯСТО': ['Plot', 'Място'], 'ГАРАЖ, ПАРКОМЯСТО': ['Garage, parking space', 'Гараж, паркомясто'] };
 const SF_PLACE_PREFIX = [[/^гр\.\s*/, 'town'], [/^с\.\s*/, 'village'], [/^к\.к\.\s*/, 'resort'], [/^(?:м-т|местност)\s*/i, 'locality'], [/^в\.з\.\s*/, 'villaZone']];
 let sq = { ...SEARCH_QUERY, ...loadJson('searchQuery', {}) };
+if (sq.deal !== 'rent') sq.deal = 'sale';
 
 const sfRunning = () => !!S.job && (S.job.status === 'running' || S.job.status === 'queued');
 
@@ -1377,11 +1377,11 @@ function sfSelect(name, opts, value, { any = t('sfAny'), id = '' } = {}) {
 }
 
 function sfNum(name, label, suffix, step) {
-  return `<label class="num-field"><span class="hint">${esc(label)}</span><span class="affix${suffix.length > 2 ? ' wide' : ''}"><input type="number" name="${name}" min="0" step="${step}" inputmode="decimal" value="${esc(sq[name])}"><span class="sfx"${name.startsWith('price') ? ' data-cur' : ''}>${esc(suffix)}</span></span></label>`;
+  return `<label class="num-field"><span class="hint">${esc(label)}</span><span class="affix${suffix.length > 2 ? ' wide' : ''}"><input type="number" name="${name}" min="0" step="${step}" inputmode="decimal" value="${esc(sq[name])}"><span class="sfx"${/^(price|ppm)/.test(name) ? ' data-cur' : ''}>${esc(suffix)}</span></span></label>`;
 }
 
 const sfRange = (a, b, suffix, step) => `<div class="range">${sfNum(a, t('sfFrom'), suffix, step)}<span class="range-sep">-</span>${sfNum(b, t('sfTo'), suffix, step)}</div>`;
-const sfSelRange = (a, b, opts) => `<div class="range"><label class="num-field"><span class="hint">${esc(t('sfFrom'))}</span>${sfSelect(a, opts, sq[a])}</label><span class="range-sep">-</span><label class="num-field"><span class="hint">${esc(t('sfTo'))}</span>${sfSelect(b, opts, sq[b])}</label></div>`;
+const sfSelRange = (a, b, optsA, optsB) => `<div class="range"><label class="num-field"><span class="hint">${esc(t('sfFrom'))}</span>${sfSelect(a, optsA, sq[a])}</label><span class="range-sep">-</span><label class="num-field"><span class="hint">${esc(t('sfTo'))}</span>${sfSelect(b, optsB, sq[b])}</label></div>`;
 const sfGroup = (id, label, body, attrs = '') => `<div class="sf-field" role="group" aria-labelledby="sfL-${id}"${attrs}><span class="field-label" id="sfL-${id}">${esc(label)}</span>${body}</div>`;
 const sfChip = (name, value, label, on) => `<label class="chip"><input type="checkbox" name="${esc(name)}" value="${esc(value)}"${on ? ' checked' : ''}><span>${esc(label)}</span></label>`;
 const sfChips = (label, chips, attrs = '') => `<fieldset class="sf-field"${attrs}><legend class="field-label">${esc(label)}</legend><div class="chips">${chips}</div></fieldset>`;
@@ -1432,7 +1432,7 @@ function sfMoreHtml(f) {
   const years = (list) => list.map((v) => ({ value: v, label: v }));
   const build = `<div class="sf-stack" data-section="extritb">${tb.checks.length ? sfChips(t('sfConstruction'), tb.checks.map((c) => sfChip(`x:${c.name}`, c.value, term(c.label, getLang()), sq.extras[c.name] === c.value)).join('')) : ''}${
     sfChips(t('sfStatus'), ['1', '2'].map((v) => sfChip('status', v, t(`sfStatus${v}`), sq.status.includes(v))).join(''))}${
-    f.yearsFrom.length ? sfGroup('year', t('sfYear'), `<div class="range"><label class="num-field"><span class="hint">${esc(t('sfFrom'))}</span>${sfSelect('yearFrom', years(f.yearsFrom), sq.yearFrom)}</label><span class="range-sep">-</span><label class="num-field"><span class="hint">${esc(t('sfTo'))}</span>${sfSelect('yearTo', years(f.yearsTo), sq.yearTo)}</label></div>`) : ''}</div>`;
+    f.yearsFrom.length ? sfGroup('year', t('sfYear'), sfSelRange('yearFrom', 'yearTo', years(f.yearsFrom), years(f.yearsTo))) : ''}</div>`;
   return `<details class="opts sf-more" id="sfMore"${S.sf.moreOpen ? ' open' : ''}><summary>${icon('funnel-simple')}<span>${esc(t('sfMore'))}</span><span class="n" id="sfMoreCount"></span>${icon('caret-down', 'opts-caret')}</summary>
 <div class="sf-more-body">
 <div class="sf-field"><label class="field-label" for="sfKeyword">${esc(t('sfKeyword'))}</label><input type="text" id="sfKeyword" name="keyword" maxlength="40" value="${esc(sq.keyword)}" aria-describedby="sfKeywordHint" lang="bg"><p class="sf-hint" id="sfKeywordHint">${esc(t('sfKeywordHint'))}</p></div>
@@ -1445,6 +1445,7 @@ ${sfChips(t('sfMedia'), sfChip('photoOnly', '1', t('sfPhotoOnly'), sq.photoOnly)
 
 function sfFieldsHtml(f) {
   const cur = sq.currency === '$' ? '$' : '€';
+  const floors = (list) => list.map((o) => ({ value: o.value, label: sfFloorLabel(o) }));
   const groups = [];
   for (const ty of f.types) {
     let g = groups.find((x) => x.id === ty.group);
@@ -1461,7 +1462,7 @@ ${types}
 <div class="sf-field" role="group" aria-labelledby="sfL-price"><div class="sf-head"><span class="field-label" id="sfL-price">${esc(t(f.deal === 'rent' ? 'sfRentPrice' : 'sfPrice'))}</span>${currency}</div>${sfRange('priceMin', 'priceMax', cur, 1000)}</div>
 ${sfGroup('ppm', t('sfPpm'), sfRange('ppmMin', 'ppmMax', `${cur}/${sqm()}`, 100))}
 ${sfGroup('area', t('sfArea'), sfRange('areaMin', 'areaMax', sqm(), 5))}
-${sfGroup('floor', t('sfFloor'), `<div class="range"><label class="num-field"><span class="hint">${esc(t('sfFrom'))}</span>${sfSelect('floorFrom', f.floorsFrom.map((o) => ({ value: o.value, label: sfFloorLabel(o) })), sq.floorFrom)}</label><span class="range-sep">-</span><label class="num-field"><span class="hint">${esc(t('sfTo'))}</span>${sfSelect('floorTo', f.floorsTo.map((o) => ({ value: o.value, label: sfFloorLabel(o) })), sq.floorTo)}</label></div>`)}
+${sfGroup('floor', t('sfFloor'), sfSelRange('floorFrom', 'floorTo', floors(f.floorsFrom), floors(f.floorsTo)))}
 <div class="sf-field"><label class="field-label" for="sfSort">${esc(t('sfSort'))}</label>${sfSelect('sort', f.sorts.map((o) => ({ value: o.value, label: sfSortLabel(o) })), sq.sort || f.sorts[0]?.value, { any: null, id: 'sfSort' })}<p class="sf-hint">${esc(t('sfSortHint'))}</p></div>
 </div>
 ${sfMoreHtml(f)}`;
@@ -1554,10 +1555,10 @@ function sfPayload() {
   const f = S.sf.form;
   const sections = sfSections();
   const q = { ...sq, extras: {} };
-  for (const id of SF_EXTRAS) {
-    if (!sections.has(id) || !f?.extras[id]) continue;
-    for (const c of f.extras[id].checks) if (sq.extras[c.name] === c.value) q.extras[c.name] = c.value;
-    for (const s of f.extras[id].selects) if (sq.extras[s.name]) q.extras[s.name] = sq.extras[s.name];
+  for (const [id, sec] of Object.entries(f?.extras || {})) {
+    if (!sections.has(id)) continue;
+    for (const c of sec.checks) if (sq.extras[c.name] === c.value) q.extras[c.name] = c.value;
+    for (const s of sec.selects) if (sq.extras[s.name]) q.extras[s.name] = sq.extras[s.name];
   }
   if (!sections.has('areah')) Object.assign(q, { yardMin: '', yardMax: '' });
   if (!sections.has('extritb')) Object.assign(q, { status: [], yearFrom: '', yearTo: '' });
@@ -1574,7 +1575,7 @@ function sfAdapt(prev, next) {
     const label = new Map(prev.types.map((x) => [x.id, x.label]));
     sq.types = sq.types.map((id) => next.types.find((x) => x.label === label.get(id))?.id).filter(Boolean);
     const extras = {};
-    for (const id of SF_EXTRAS) {
+    for (const id of Object.keys(next.extras)) {
       for (const c of prev.extras[id]?.checks || []) {
         const m = sq.extras[c.name] === c.value && next.extras[id]?.checks.find((x) => x.value === c.value);
         if (m) extras[m.name] = m.value;
@@ -1589,7 +1590,7 @@ function sfAdapt(prev, next) {
   // Drop what the live form doesn't offer (e.g. an old saved query), and keep to one type group.
   const types = sq.types.map((id) => next.types.find((x) => x.id === id)).filter(Boolean);
   sq.types = types.filter((x) => x.group === types[0].group).map((x) => x.id);
-  const names = new Set(SF_EXTRAS.flatMap((id) => [...(next.extras[id]?.checks || []), ...(next.extras[id]?.selects || [])].map((x) => x.name)));
+  const names = new Set(Object.values(next.extras).flatMap((sec) => [...sec.checks, ...sec.selects].map((x) => x.name)));
   sq.extras = Object.fromEntries(Object.entries(sq.extras).filter(([k]) => names.has(k)));
   if (!next.locations.some((l) => l.value === sq.location)) sq.location = '';
   if (sq.location && next.location === sq.location) sq.districts = sq.districts.filter((d) => next.districts.includes(d));
@@ -1614,21 +1615,34 @@ async function loadSearchForm() {
     S.sf.loading = null;
     sfAdapt(prev, form);
     S.sf.form = form;
-    if (prev && prev.deal === form.deal) { renderSfDistricts(); sfUpdateFoot(); } else renderSearchFields();
+    // A full render also clears the dimming of a deal switch that was switched back meanwhile.
+    if (prev && prev.deal === form.deal && !$('#sfFields').classList.contains('is-loading')) { renderSfDistricts(); sfUpdateFoot(); } else renderSearchFields();
   } catch (err) {
     if (S.sf.loading !== key) return;
     S.sf.loading = null;
-    if (prev) {
+    if (err.status === 400 && sq.location) {
+      // A saved place imot.bg no longer lists: search everywhere instead.
+      Object.assign(sq, { location: '', districts: [] });
+      saveJson('searchQuery', sq);
+      loadSearchForm();
+    } else if (prev) {
       // Keep the form that works; undo the change that needed another one.
-      S.sf.note = { text: t('sfLoadError', { message: err.message }), error: true };
+      S.sf.note = { text: t('sfLoadError', { message: sfErrorText(err) }), error: true };
       sq.deal = prev.deal;
       if (sq.location !== prev.location) { sq.location = prev.location; sq.districts = []; }
+      saveJson('searchQuery', sq);
       renderSearchFields();
     } else {
-      S.sf.error = err.message;
+      S.sf.error = sfErrorText(err);
       renderSearchFields();
     }
   }
+}
+
+/** Translated message for known error codes (e.g. imot.bg blocking requests), else the server's text. */
+function sfErrorText(err) {
+  const key = `err_${err.code}`;
+  return err.code && t(key) !== key ? t(key) : err.message;
 }
 
 function sfUpdateFoot() {
@@ -1688,7 +1702,7 @@ async function submitSearch() {
     $('#sfProgress').focus();
     pollJob();
   } catch (err) {
-    S.sf.note = { text: err.message, error: true };
+    S.sf.note = { text: sfErrorText(err), error: true };
   } finally {
     S.sf.busy = false;
     sfUpdateFoot();
@@ -1745,7 +1759,7 @@ function bindSearchDialog() {
     saveJson('searchQuery', sq);
     S.sf.note = null;
     renderSearchFields();
-    if (S.sf.form && S.sf.form.deal !== sq.deal) loadSearchForm();
+    if (!S.sf.form || S.sf.form.deal !== sq.deal) loadSearchForm();
   });
   $('#sfEdit').addEventListener('click', () => {
     S.sf.view = 'form';
