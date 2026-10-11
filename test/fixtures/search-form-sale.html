@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+    <html lang="bg">
+      <head>
+        <title>Намери Обяви за Недвижими Имоти в Imot.bg тип Продава</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=windows-1251">
+        <meta name="description" content="Търсене на обяви тип Продава – по град, район и квартал. Търсене по цена, квадратура, особености на обекта и други показатели. Най-добрата търсачка за недвижими имоти в България.">
+<meta name="robots" content="noindex, follow" />
+        <link rel="SHORTCUT ICON" href="https://www.imot.bg/favicon.ico"/>
+        <link rel="stylesheet" href="/styless/styles.css?695" type="text/css">
+        
+                <script type="text/javascript" charset="UTF-8" src="//cdn.cookie-script.com/s/5874e0489319507715f52b3fd38d9a7a.js"></script>
+        <script type="text/javascript" src="/jss/scripts.js?695"></script>
+        <script type="text/javascript" src="/jss/dim.js?695"></script>
+        <script type="text/javascript" src="/jss/mobile-detect.min.js?695"></script>
+        <script type="text/javascript" src="/jss/jquery.min.js"></script>
+        <script type="text/javascript">
+        
+        
+        </script>
+        
+
+          <script>
+            $(document).ready( function() {
+              if (supportsSVG()) {
+                $("#fmap").on('hover', 'path',function(e){
+                  if ($(this).attr('fill')) {
+                    var hovercol='#990000';
+                    var text = $(this).find('title').text() || $(this).find('span').text();
+                    if (text === 'Гърция')
+                      hovercol = '#265eae';
+                    $(this).attr('style','fill:'+hovercol);
+                    $(this).attr('cursor','pointer');
+                  };
+                });
+
+                $("#fmap").on('mouseout', 'path',function(e){
+                  if (!$(this).attr('selected')) {
+                    $(this).attr('style', $(this).attr('fill'));
+                  }
+                });
+
+                $("#fmap").on('hover', 'circle',function(e){
+                  if ($(this).attr('fill')) {
+                    $(this).attr('style','fill:#990000');
+                    $(this).attr('cursor','pointer');
+                  };
+                });
+
+                $("#fmap").on('mouseout', 'circle',function(e){
+                  if (!$(this).attr('selected')) {
+                    $(this).attr('style', $(this).attr('fill'));
+                  }
+                });
+
+                $("#fmap").on('click', '.bgsvg path',function(e){
+                  var selected_area=$('#'+this.id).find('title')[0].textContent;
+
+                  var fi=0;
+                  for ( fi=0;fi<document.search.f38.length;fi++ ) {
+                    var option_text = document.search.f38.options[fi].value;
+                    if (option_text == selected_area){
+                      document.search.f38.selectedIndex = fi;
+                      sef_searchsubmit('2',document.search);
+                    };
+                  }
+                });
+
+                $("#fmap").on('click', 'circle',function(e){
+                  var selected_area=$('#'+this.id).find('title')[0].textContent;
+
+                  var fi=0;
+                  for ( fi=0;fi<document.search.f38.length;fi++ ) {
+                    var option_text = document.search.f38.options[fi].value;
+                    if (option_text == selected_area){
+                      document.search.f38.selectedIndex = fi;
+                      sef_searchsubmit('2',document.search);
+                    };
+                  }
+                });
+
+              } else {
+                $("#fmap").remove();
+              }
+            });
+          </script>
+<script type="text/javascript" src="/jss/ac_runactivecontent.js"></script>
+        <script>(function(){/*
+
+ Copyright The Closure Library Authors.
+ SPDX-License-Identifier: Apache-2.0
+*/
+'use strict';var g=function(a){var b=0;return function(){return b<a.length?{done:!1,value:a[b++]}:{done:!0}}},l=this||self,m=/^[\w+/_-]+[=]{0,2}$/,p=null,q=function(){},r=function(a){var b=typeof a;if("object"==b)if(a){if(a instanceof Array)return"array";if(a instanceof Object)return b;var c=Object.prototype.toString.call(a);if("[object Window]"==c)return"object";if("[object Array]"==c||"number"==typeof a.length&&"undefined"!=typeof a.splice&&"undefined"!=typeof a.propertyIsEnumerable&&!a.propertyIsEnumerable("splice"))return"array";
+if("[object Function]"==c||"undefined"!=typeof a.call&&"undefined"!=typeof a.propertyIsEnumerable&&!a.propertyIsEnumerable("call"))return"function"}else return"null";else if("function"==b&&"undefined"==typeof a.call)return"object";return b},u=function(a,b){function c(){}c.prototype=b.prototype;a.prototype=new c;a.prototype.constructor=a};var v=function(a,b){Object.defineProperty(l,a,{configurable:!1,get:function(){return b},set:q})};var y=function(a,b){this.b=a===w&&b||"";this.a=x},x={},w={};var aa=function(a,b){a.src=b instanceof y&&b.constructor===y&&b.a===x?b.b:"type_error:TrustedResourceUrl";if(null===p)b:{b=l.document;if((b=b.querySelector&&b.querySelector("script[nonce]"))&&(b=b.nonce||b.getAttribute("nonce"))&&m.test(b)){p=b;break b}p=""}b=p;b&&a.setAttribute("nonce",b)};var z=function(){return Math.floor(2147483648*Math.random()).toString(36)+Math.abs(Math.floor(2147483648*Math.random())^+new Date).toString(36)};var A=function(a,b){b=String(b);"application/xhtml+xml"===a.contentType&&(b=b.toLowerCase());return a.createElement(b)},B=function(a){this.a=a||l.document||document};B.prototype.appendChild=function(a,b){a.appendChild(b)};var C=function(a,b,c,d,e,f){try{var k=a.a,h=A(a.a,"SCRIPT");h.async=!0;aa(h,b);k.head.appendChild(h);h.addEventListener("load",function(){e();d&&k.head.removeChild(h)});h.addEventListener("error",function(){0<c?C(a,b,c-1,d,e,f):(d&&k.head.removeChild(h),f())})}catch(n){f()}};var ba=l.atob("aHR0cHM6Ly93d3cuZ3N0YXRpYy5jb20vaW1hZ2VzL2ljb25zL21hdGVyaWFsL3N5c3RlbS8xeC93YXJuaW5nX2FtYmVyXzI0ZHAucG5n"),ca=l.atob("WW91IGFyZSBzZWVpbmcgdGhpcyBtZXNzYWdlIGJlY2F1c2UgYWQgb3Igc2NyaXB0IGJsb2NraW5nIHNvZnR3YXJlIGlzIGludGVyZmVyaW5nIHdpdGggdGhpcyBwYWdlLg=="),da=l.atob("RGlzYWJsZSBhbnkgYWQgb3Igc2NyaXB0IGJsb2NraW5nIHNvZnR3YXJlLCB0aGVuIHJlbG9hZCB0aGlzIHBhZ2Uu"),ea=function(a,b,c){this.b=a;this.f=new B(this.b);this.a=null;this.c=[];this.g=!1;this.i=b;this.h=c},F=function(a){if(a.b.body&&!a.g){var b=
+function(){D(a);l.setTimeout(function(){return E(a,3)},50)};C(a.f,a.i,2,!0,function(){l[a.h]||b()},b);a.g=!0}},D=function(a){for(var b=G(1,5),c=0;c<b;c++){var d=H(a);a.b.body.appendChild(d);a.c.push(d)}b=H(a);b.style.bottom="0";b.style.left="0";b.style.position="fixed";b.style.width=G(100,110).toString()+"%";b.style.zIndex=G(2147483544,2147483644).toString();b.style["background-color"]=I(249,259,242,252,219,229);b.style["box-shadow"]="0 0 12px #888";b.style.color=I(0,10,0,10,0,10);b.style.display=
+"flex";b.style["justify-content"]="center";b.style["font-family"]="Roboto, Arial";c=H(a);c.style.width=G(80,85).toString()+"%";c.style.maxWidth=G(750,775).toString()+"px";c.style.margin="24px";c.style.display="flex";c.style["align-items"]="flex-start";c.style["justify-content"]="center";d=A(a.f.a,"IMG");d.className=z();d.src=ba;d.style.height="24px";d.style.width="24px";d.style["padding-right"]="16px";var e=H(a),f=H(a);f.style["font-weight"]="bold";f.textContent=ca;var k=H(a);k.textContent=da;J(a,
+e,f);J(a,e,k);J(a,c,d);J(a,c,e);J(a,b,c);a.a=b;a.b.body.appendChild(a.a);b=G(1,5);for(c=0;c<b;c++)d=H(a),a.b.body.appendChild(d),a.c.push(d)},J=function(a,b,c){for(var d=G(1,5),e=0;e<d;e++){var f=H(a);b.appendChild(f)}b.appendChild(c);c=G(1,5);for(d=0;d<c;d++)e=H(a),b.appendChild(e)},G=function(a,b){return Math.floor(a+Math.random()*(b-a))},I=function(a,b,c,d,e,f){return"rgb("+G(Math.max(a,0),Math.min(b,255)).toString()+","+G(Math.max(c,0),Math.min(d,255)).toString()+","+G(Math.max(e,0),Math.min(f,
+255)).toString()+")"},H=function(a){a=A(a.f.a,"DIV");a.className=z();return a},E=function(a,b){0>=b||null!=a.a&&0!=a.a.offsetHeight&&0!=a.a.offsetWidth||(fa(a),D(a),l.setTimeout(function(){return E(a,b-1)},50))},fa=function(a){var b=a.c;var c="undefined"!=typeof Symbol&&Symbol.iterator&&b[Symbol.iterator];b=c?c.call(b):{next:g(b)};for(c=b.next();!c.done;c=b.next())(c=c.value)&&c.parentNode&&c.parentNode.removeChild(c);a.c=[];(b=a.a)&&b.parentNode&&b.parentNode.removeChild(b);a.a=null};var ia=function(a,b,c,d,e){var f=ha(c),k=function(n){n.appendChild(f);l.setTimeout(function(){f?(0!==f.offsetHeight&&0!==f.offsetWidth?b():a(),f.parentNode&&f.parentNode.removeChild(f)):a()},d)},h=function(n){document.body?k(document.body):0<n?l.setTimeout(function(){h(n-1)},e):b()};h(3)},ha=function(a){var b=document.createElement("div");b.className=a;b.style.width="1px";b.style.height="1px";b.style.position="absolute";b.style.left="-10000px";b.style.top="-10000px";b.style.zIndex="-10000";return b};var K={},L=null;var M=function(){},N="function"==typeof Uint8Array,O=function(a,b){a.b=null;b||(b=[]);a.j=void 0;a.f=-1;a.a=b;a:{if(b=a.a.length){--b;var c=a.a[b];if(!(null===c||"object"!=typeof c||Array.isArray(c)||N&&c instanceof Uint8Array)){a.g=b-a.f;a.c=c;break a}}a.g=Number.MAX_VALUE}a.i={}},P=[],Q=function(a,b){if(b<a.g){b+=a.f;var c=a.a[b];return c===P?a.a[b]=[]:c}if(a.c)return c=a.c[b],c===P?a.c[b]=[]:c},R=function(a,b,c){a.b||(a.b={});if(!a.b[c]){var d=Q(a,c);d&&(a.b[c]=new b(d))}return a.b[c]};
+M.prototype.h=N?function(){var a=Uint8Array.prototype.toJSON;Uint8Array.prototype.toJSON=function(){var b;void 0===b&&(b=0);if(!L){L={};for(var c="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".split(""),d=["+/=","+/","-_=","-_.","-_"],e=0;5>e;e++){var f=c.concat(d[e].split(""));K[e]=f;for(var k=0;k<f.length;k++){var h=f[k];void 0===L[h]&&(L[h]=k)}}}b=K[b];c=[];for(d=0;d<this.length;d+=3){var n=this[d],t=(e=d+1<this.length)?this[d+1]:0;h=(f=d+2<this.length)?this[d+2]:0;k=n>>2;n=(n&
+3)<<4|t>>4;t=(t&15)<<2|h>>6;h&=63;f||(h=64,e||(t=64));c.push(b[k],b[n],b[t]||"",b[h]||"")}return c.join("")};try{return JSON.stringify(this.a&&this.a,S)}finally{Uint8Array.prototype.toJSON=a}}:function(){return JSON.stringify(this.a&&this.a,S)};var S=function(a,b){return"number"!==typeof b||!isNaN(b)&&Infinity!==b&&-Infinity!==b?b:String(b)};M.prototype.toString=function(){return this.a.toString()};var T=function(a){O(this,a)};u(T,M);var U=function(a){O(this,a)};u(U,M);var ja=function(a,b){this.c=new B(a);var c=R(b,T,5);c=new y(w,Q(c,4)||"");this.b=new ea(a,c,Q(b,4));this.a=b},ka=function(a,b,c,d){b=new T(b?JSON.parse(b):null);b=new y(w,Q(b,4)||"");C(a.c,b,3,!1,c,function(){ia(function(){F(a.b);d(!1)},function(){d(!0)},Q(a.a,2),Q(a.a,3),Q(a.a,1))})};var la=function(a,b){V(a,"internal_api_load_with_sb",function(c,d,e){ka(b,c,d,e)});V(a,"internal_api_sb",function(){F(b.b)})},V=function(a,b,c){a=l.btoa(a+b);v(a,c)},W=function(a,b,c){for(var d=[],e=2;e<arguments.length;++e)d[e-2]=arguments[e];e=l.btoa(a+b);e=l[e];if("function"==r(e))e.apply(null,d);else throw Error("API not exported.");};var X=function(a){O(this,a)};u(X,M);var Y=function(a){this.h=window;this.a=a;this.b=Q(this.a,1);this.f=R(this.a,T,2);this.g=R(this.a,U,3);this.c=!1};Y.prototype.start=function(){ma();var a=new ja(this.h.document,this.g);la(this.b,a);na(this)};
+var ma=function(){var a=function(){if(!l.frames.googlefcPresent)if(document.body){var b=document.createElement("iframe");b.style.display="none";b.style.width="0px";b.style.height="0px";b.style.border="none";b.style.zIndex="-1000";b.style.left="-1000px";b.style.top="-1000px";b.name="googlefcPresent";document.body.appendChild(b)}else l.setTimeout(a,5)};a()},na=function(a){var b=Date.now();W(a.b,"internal_api_load_with_sb",a.f.h(),function(){var c;var d=a.b,e=l[l.btoa(d+"loader_js")];if(e){e=l.atob(e);
+e=parseInt(e,10);d=l.btoa(d+"loader_js").split(".");var f=l;d[0]in f||"undefined"==typeof f.execScript||f.execScript("var "+d[0]);for(;d.length&&(c=d.shift());)d.length?f[c]&&f[c]!==Object.prototype[c]?f=f[c]:f=f[c]={}:f[c]=null;c=Math.abs(b-e);c=1728E5>c?0:c}else c=-1;0!=c&&(W(a.b,"internal_api_sb"),Z(a,Q(a.a,6)))},function(c){Z(a,c?Q(a.a,4):Q(a.a,5))})},Z=function(a,b){a.c||(a.c=!0,a=new l.XMLHttpRequest,a.open("GET",b,!0),a.send())};(function(a,b){l[a]=function(c){for(var d=[],e=0;e<arguments.length;++e)d[e-0]=arguments[e];l[a]=q;b.apply(null,d)}})("__d3lUW8vwsKlB__",function(a){"function"==typeof window.atob&&(a=window.atob(a),a=new X(a?JSON.parse(a):null),(new Y(a)).start())});}).call(this);
+
+window.__d3lUW8vwsKlB__("WyI0YTBhODk3MmZlNzIwMDgwIixbbnVsbCxudWxsLG51bGwsImh0dHBzOi8vZnVuZGluZ2Nob2ljZXNtZXNzYWdlcy5nb29nbGUuY29tL2YvQUdTS1d4VWhqXzdlWWM2MzVYbk5ZTkgteWdXaEZTOXRDdmh5S21va1pQQkNyTkRBX2YwdUNYSTFweHJSQk9fdjBkVlB1cUJPb3kxaDg1YXlzd01rOVZKSVRmd1x1MDAzZCJdCixbMjAsImRpdi1ncHQtYWQiLDEwMCwiTkdFd1lUZzVOekptWlRjeU1EQTRNQVx1MDAzZFx1MDAzZCIsW251bGwsbnVsbCxudWxsLCJodHRwczovL3d3dy5nc3RhdGljLmNvbS8wZW1uL2YvcC80YTBhODk3MmZlNzIwMDgwLmpzP3VzcXBcdTAwM2RDQTAiXQpdCiwiaHR0cHM6Ly9mdW5kaW5nY2hvaWNlc21lc3NhZ2VzLmdvb2dsZS5jb20vbC9BR1NLV3hXTmFTeEhpaVBkOURldjdGWl9ZbUNpSklOQmVmQjQ4WkJ5VVc2eG5XTnJGcWQ3OXRGVmlsZEt3Ti12ZTlLX254eUVBT19FUF9wQWNsdEFfTlF0P2FiXHUwMDNkMSIsImh0dHBzOi8vZnVuZGluZ2Nob2ljZXNtZXNzYWdlcy5nb29nbGUuY29tL2wvQUdTS1d4WEdqdFhkREs5NW13RXAwajhnOGZ4eDlLZmtpNDlsSTJrdmxXTzJxaFZhZ2hIXy1YNWtnUml6aF9FZW1xZW9HN0RJNmE3SDZoLVVCMUd3ZTdBZT9hYlx1MDAzZDJcdTAwMjZzYmZcdTAwM2QxIiwiaHR0cHM6Ly9mdW5kaW5nY2hvaWNlc21lc3NhZ2VzLmdvb2dsZS5jb20vbC9BR1NLV3hXRmktTGk1cjBoeGljcDJkOGN1aUlWMGQ2MTUxZ0ZtbGVWLS1nTjdaSnB3ZTgyMVFsY0RkNjlleW8xck1PMjVQQl8zU2x2c2plWWhyMVRxVEZ1P3NiZlx1MDAzZDIiXQo=");</script>
+        <script defer async src="https://www.googletagmanager.com/gtag/js?id=G-0LZF32451N"></script>
+        <script>
+        const gtagLoaded = new Event('gtag-loaded');(function(d, s, id){var js, fjs = d.getElementsByTagName(s)[0];if (d.getElementById(id)) {return;}js = d.createElement(s);js.id = id;js.defer = true;js.async = true;js.src = "https://www.googletagmanager.com/gtag/js?id=G-0LZF32451N";js.onload = function(){document.dispatchEvent(gtagLoaded);};fjs.parentNode.insertBefore(js, fjs);}(document, 'script', 'gtag-js'));try {window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', 'G-0LZF32451N');gtag('config', 'UA-1160575-1');}catch(error){}
+        </script>
+
+        <script async="async" src="https://www.googletagservices.com/tag/js/gpt.js"></script>
+        <script>
+          var googletag = googletag || {};
+          googletag.cmd = googletag.cmd || [];
+        </script>
+        <script>
+          googletag.cmd.push(function() {
+            googletag.pubads().set("adsense_background_color", "FFFFFF");
+          });
+        </script>
+        <script>
+        googletag.cmd.push(function() {
+          
+
+          googletag.pubads().enableSingleRequest();
+          googletag.enableServices();
+        });
+        </script>
+
+      </head>
+      <body onload="javascript: if(window.startw)startw();">
+
+      
+      
+
+      <div style="text-align:left; z-index:1; position:relative; margin: 0 auto 10px auto; width:980px; cursor:auto;">
+      
+  
+  <div class="header">
+    <a href="//www.imot.bg" class="left" style="text-decoration:none;">
+      <img src="//www.imot.bg/images/picturess/logo.svg" style="width:212px; height:65px;" alt="imot.bg – обяви за продажби и наеми на имоти">
+      <div class="iSlogan">Сайт за имоти <strong>№1</strong></div>
+    </a>
+    <div id="logtable2" class="right">
+      
+  
+  <div class="regWindow" id="langWindow">
+    <div class="panel" style="width:700px; left: 0">
+      <div class="formVhod shareWindow" style="border-radius:10px;width:700px;">
+        <a href="javascript:closLangWindow();" class="close" title="Затвори" style="margin-left:645px;"></a>
+        <div class="price-stat">
+          <div class="shareOptions" style="width:660px">
+            <div class="boxTITLE">Translations in other languages:</div>
+            <div class="TITLE">
+              All real estate ads published on <span style="color: #900;">imot.bg</span> have been translated into English and published on the partner site
+              <br>
+              <img src="//www.imot.bg/images/picturess/icons/imoti-info-logo.svg" style="margin-top: 12px; height: 38px;">
+            </div>
+
+            <div class="screen1">
+              <div class="emailGrid" style="grid-gap:0">
+                <div class="C4">
+                  <a href="https://imoti.info/en" class="send gotoSite" target="_blank" onclick="closLangWindow();">Continue</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="logPopup" id="logpopup"></div>
+  <a class="flagBtn" onclick="ShowLangWindow();"><img src="//www.imot.bg/images/picturess/icons/flag-en.svg"></a>
+  <a data-link="//www.imot.bg/pcgi/imot.cgi?act=1" class="clever-link addButton"><img src="//www.imot.bg/images/picturess/plus.svg"> ДОБАВИ ОБЯВА</a>
+  
+      <a data-link="//www.imot.bg/pcgi/imot.cgi?act=26&rub=0" class="clever-link editButton">Редакция на обява</a>
+      <div class="loginLinks">
+        <span class="logIn">
+          <a data-link="//www.imot.bg/pcgi/imot.cgi?act=26&logact=1" class="clever-link" style="cursor:pointer;"><strong>Вход</strong></a> | <a data-link="//www.imot.bg/pcgi/imot.cgi?act=26&logact=2" class="clever-link" style="cursor:pointer;">Нова Регистрация</a>
+        </span>
+      </div>
+      
+  
+  
+    </div>
+  </div>
+  <div class="iMenu">
+    <a href="//www.imot.bg" class="">Начало</a>
+    <a data-link="//www.imot.bg/pcgi/imot.cgi?act=1" class="clever-link ">Добави обява</a>
+    <a href="//www.imot.bg/search" class="selected">Търсене</a>
+    <a href="//www.imot.bg/agentsii" class="">Агенции</a>
+    <a href="https://fakti.bg" target="_blank">Новини</a>
+    <a href="https://creditcenter.bg/buy-new-home" target="_blank">Кредити</a>
+    <div class="imimmore">
+      <a href="//www.imot.bg/more-services" class="oshte ">+ Още...</a>
+      <div class="down-menu">
+        <a href="//www.imot.bg/sredni-ceni" class="sredni">Средни цени на имотите</a>
+        <a href="//www.imot.bg/ocenka-na-imot" class="kolko">Колко струва моят имот?</a>
+        <a data-link="//www.imot.bg/searcharch" class="clever-link arhivni" style="cursor:pointer;">Архивни данни</a>
+        <a href="//www.imot.bg/imoti-s-padashti-ceni" class="padashti">Имоти с падащи цени</a>
+        <a href="//www.imot.bg/obiavi-novo-stroitelstvo" class="novo-stroitelstvo">Нови сгради</a>
+      </div>
+    </div>
+    <span id="logtable3"><a href="//www.imot.bg/pcgi/imot.cgi?act=26" class="right">Вход / Регистрация</a></span>
+    <div class="bottomLine"></div>
+  </div>
+  
+  
+  <div class="submenu">
+    
+      <a href="//www.imot.bg/search"><span class="">Избор на рубрика</span></a>&nbsp;|&nbsp;
+      <a href="//www.imot.bg/search/prodazhbi"><span class="selected">Продава</span></a>&nbsp;|&nbsp;
+      <a href="//www.imot.bg/search/naemi"><span class="">Дава под наем</span></a>&nbsp;|&nbsp;
+      <a href="//www.imot.bg/search/kupuva"><span class="">Купува</span></a>&nbsp;|&nbsp;
+      <a href="//www.imot.bg/search/tarsi-da-naeme"><span class="">Търси да наеме</span></a>&nbsp;|&nbsp;
+      <a href="//www.imot.bg/search/zamenya"><span class="">Заменя</span></a>&nbsp;|&nbsp;
+      <a href="//www.imot.bg/search/sakvartiranti"><span class="">Съквартиранти</span></a>
+
+      <a href="//www.imot.bg/ocenka-na-imot" class="f_right">Колко струва моят имот?</a>
+  </div>
+  
+  
+  
+  
+  
+      <table width=980 cellspacing=0 cellpadding=0 border=0 style="margin-top:10px;">
+        <tr>
+          <td width=980 valign="bottom"><h1 style="margin:0px; font-weight:bold; font-size:14px; display:inline-block;">Търсене в imot.bg - Продава</h1><span data-link="//www.imot.bg/searcharch/prodazhbi" class="clever-link archiveSearch">Търсене в АРХИВ 2013 - 2026 г.</span></td>
+        </tr>
+      </table>
+      <form name="search" method="post" action="//www.imot.bg/pcgi/imot.cgi" style="margin: 0px; padding: 0px;">
+      <input type="hidden" name="act" value="2">
+      <input type="hidden" name="rub" value="1">
+      <input type="hidden" name="rub_pub_save" value="1">
+      <input type="hidden" name="topmenu" value="2">
+      <input type="hidden" name="actions" value="1">
+      <input type="hidden" name="f0" value="46.232.159.58">
+      <input type="hidden" name="f1" value="1">
+      <input type="hidden" name="f2" value=""> <!--NU-->
+      <input type="hidden" name="f3" value=""> <!--NU-->
+      <input type="hidden" name="f4" value="1">
+      <table width=980 cellpadding=0 cellspacing=0 border=0 style="margin-top:10px; border:#900 1px solid; border-top:#900 3px solid; border-bottom:0;">
+        <tr>
+          <td width=490 valign="top" style="padding-top:15px; padding-left:20px;">
+            
+      <input type='hidden' id='vigroupsjs' value='{"19":6,"15":5,"7":2,"12":2,"13":2,"14":2,"17":2,"16":2,"20":7,"9":3,"10":3,"11":3,"1":1,"2":1,"3":1,"4":1,"5":1,"6":1,"8":1,"18":4}'>
+      <input type='hidden' id='vigroupscol' value='["#EBEBEB","#E8F9D9"]'>
+      <input type='hidden' id='displidjs' value='{"extri1":"none","extritb":"none","extrip":"none","business":"none","priceeff":"none","areah":"none"}'>
+      <input type='hidden' id='displvijs' value='{"1":["extritb","extri1","priceeff"],"10":["areah","extritb","extri1"],"11":["areah","extritb","extri1"],"12":["extritb","extri1"],"13":["extritb","extri1"],"14":["extritb","extri1"],"15":["extritb","extri1"],"16":["extritb","extri1"],"17":["extritb","extri1"],"18":["extrip"],"19":["extri1"],"2":["extritb","extri1","priceeff"],"20":["extritb","extri1","business"],"3":["extritb","extri1","priceeff"],"4":["extritb","extri1"],"5":["extritb","extri1"],"6":["extritb","extri1"],"7":["extritb","extri1"],"8":["extritb","extri1"],"9":["extritb","extri1"]}'>
+      <input type="hidden" name="f7" value="">
+      <table width=470 border=0 cellspacing=0 cellpadding=0>
+        <tr>
+          <td colspan=6 valign="top" style="padding-bottom:5px; font-weight:bold;">Вид на имота:</td>
+        </tr>
+        <tr>
+          <td width=156 valign="top">
+            <div id="gr1" style="width:150px; height:143px;background-color:#E8F9D9; padding:1px;">
+<div><label><input type="checkbox" id="vi1" onclick="javascript:srcvichange(1)">1-СТАЕН</label></div>
+<div><label><input type="checkbox" id="vi2" onclick="javascript:srcvichange(1)">2-СТАЕН</label></div>
+<div><label><input type="checkbox" id="vi3" onclick="javascript:srcvichange(1)">3-СТАЕН</label></div>
+<div><label><input type="checkbox" id="vi4" onclick="javascript:srcvichange(1)">4-СТАЕН</label></div>
+<div><label><input type="checkbox" id="vi5" onclick="javascript:srcvichange(1)">МНОГОСТАЕН</label></div>
+<div><label><input type="checkbox" id="vi6" onclick="javascript:srcvichange(1)">МЕЗОНЕТ</label></div>
+<div><label><input type="checkbox" id="vi8" onclick="javascript:srcvichange(1)">АТЕЛИЕ, ТАВАН</label></div>
+</div>
+          </td>
+          <td width=157 valign="top">
+            <div id="gr2" style="width:150px; height:116px;background-color:#E8F9D9; padding:1px;">
+<div><label><input type="checkbox" id="vi7" onclick="javascript:srcvichange(2)">ОФИС</label></div>
+<div><label><input type="checkbox" id="vi12" onclick="javascript:srcvichange(2)">МАГАЗИН</label></div>
+<div><label><input type="checkbox" id="vi13" onclick="javascript:srcvichange(2)">ЗАВЕДЕНИЕ</label></div>
+<div><label><input type="checkbox" id="vi14" onclick="javascript:srcvichange(2)">СКЛАД</label></div>
+<div><label><input type="checkbox" id="vi17" onclick="javascript:srcvichange(2)">ХОТЕЛ</label></div>
+<div><label><input type="checkbox" id="vi16" onclick="javascript:srcvichange(2)">ПРОМ. ПОМЕЩЕНИЕ</label></div>
+</div>
+            <div id="gr7" style="width:150px; height:22px; margin-top:5px;background-color:#E8F9D9; padding:1px;">
+<div><label><input type="checkbox" id="vi20" onclick="javascript:srcvichange(7)">БИЗНЕС ИМОТ</label></div>
+</div>
+          </td>
+          <td width=157 valign="top">
+            <div id="gr3" style="width:150px; height:62px;background-color:#E8F9D9; padding:1px;">
+<div><label><input type="checkbox" id="vi9" onclick="javascript:srcvichange(3)">ЕТАЖ ОТ КЪЩА</label></div>
+<div><label><input type="checkbox" id="vi10" onclick="javascript:srcvichange(3)">КЪЩА</label></div>
+<div><label><input type="checkbox" id="vi11" onclick="javascript:srcvichange(3)">ВИЛА</label></div>
+</div>
+            <div id="gr4" style="width:150px; height:22px; margin-top:5px;background-color:#E8F9D9; padding:1px;">
+<div><label><input type="checkbox" id="vi18" onclick="javascript:srcvichange(4)">ПАРЦЕЛ</label></div>
+</div>
+            <div id="gr5" style="width:150px; height:22px; margin-top:5px;background-color:#E8F9D9; padding:1px;">
+<div><label><input type="checkbox" id="vi15" onclick="javascript:srcvichange(5)">ГАРАЖ, ПАРКОМЯСТО</label></div>
+</div>
+            <div id="gr6" style="width:150px; height:22px; margin-top:5px;background-color:#E8F9D9; padding:1px;">
+<div><label><input type="checkbox" id="vi19" onclick="javascript:srcvichange(6)">ЗЕМЕДЕЛСКА ЗЕМЯ</label></div>
+</div>
+          </td>
+        </tr>
+      </table>
+      
+          </td>
+          <td width=490 valign="top" style="padding-top:15px; padding-left:10px; padding-right:20px;">
+            <table width=460 cellspacing=0 cellpadding=0 border=0>
+              <tr>
+                <td width=185 colspan=3>
+                  <b>Цена на имота:</b>
+                </td>
+                <td width=15><img src="//www.imot.bg/images/picturess/no.gif" width=15 height=1 border=0></td>
+                <td width=185 colspan=3>
+                  <b>Цена на кв.м площ:</b>
+                </td>
+                <td width=5><img src="//www.imot.bg/images/picturess/no.gif" width=5 height=1 border=0></td>
+                <td width=70>
+                  <b>Валута:</b>
+                </td>
+              </tr>
+              <tr>
+                <td width=90 style="padding-top:5px;">
+                  от <input type="text" name="f28" value="" class="sw70" size=4 maxlength=8 pattern="[0-9]*" inputmode="numeric" onkeyup="RemoveLetters(this,0)">
+                </td>
+                <td width=5><img src="//www.imot.bg/images/picturess/no.gif" width=5 height=1 border=0></td>
+                <td width=90 style="padding-top:5px;">
+                  до <input type="text" name="f29" value="" class="sw70" size=4 maxlength=8 pattern="[0-9]*" inputmode="numeric" onkeyup="RemoveLetters(this,0)">
+                </td>
+                <td width=15><img src="//www.imot.bg/images/picturess/no.gif" width=15 height=1 border=0></td>
+                <td width=90 style="padding-top:5px;">
+                  от <input type="text" name="f43" value="" class="sw70" size=4 maxlength=8 pattern="[0-9]*" inputmode="numeric" onkeyup="RemoveLetters(this,0)">
+                </td>
+                <td width=5><img src="//www.imot.bg/images/picturess/no.gif" width=5 height=1 border=0></td>
+                <td width=90 style="padding-top:5px;">
+                  до <input type="text" name="f44" value="" class="sw70" size=4 maxlength=8 pattern="[0-9]*" inputmode="numeric" onkeyup="RemoveLetters(this,0)">
+                </td>
+                <td width=5><img src="//www.imot.bg/images/picturess/no.gif" width=5 height=1 border=0></td>
+                <td width=70 style="padding-top:5px;">
+                  <select name="f30" class="sw70"><option value="EUR">EUR
+<option value="$">$
+</select>
+                </td>
+              </tr>
+            </table>
+
+            <table width=460 cellspacing=0 cellpadding=0 border=0>
+              <tr>
+                <td width=185 colspan=3 style="padding-top:20px;">
+                  <b>Квадратура:</b> (кв.м)
+                </td>
+                <td width=15><img src="//www.imot.bg/images/picturess/no.gif" width=15 height=1 border=0></td>
+                <td width=260 style="padding-top:20px;">
+                  Сортиране според:
+                </td>
+              </tr>
+              <tr>
+                <td width=90 style="padding-top:5px;">
+                  от <input type="text" name="f26" value="" class="sw70" size=4 maxlength=8 pattern="[0-9.]*" inputmode="numeric" onkeyup="RemoveLetters(this,1)">
+                </td>
+                <td width=5><img src="//www.imot.bg/images/picturess/no.gif" width=5 height=1 border=0></td>
+                <td width=90 style="padding-top:5px;">
+                  до <input type="text" name="f27" value="" class="sw70" size=4 maxlength=8 pattern="[0-9.]*" inputmode="numeric" onkeyup="RemoveLetters(this,1)">
+                </td>
+                <td width=15><img src="//www.imot.bg/images/picturess/no.gif" width=15 height=1 border=0></td>
+                <td width=260 style="padding-top:5px;" colspan=5>
+                  <select name="f41" class="sw260"><option value="1">Вид/Район/Цена
+<option value="2">Най-новите обяви
+<option value="3">Цена
+<option value="4">Цена на кв.м
+<option value="5">Най-новите обяви от последните 3 дни
+</select>
+                </td>
+              </tr>
+
+              <tr>
+                <td width=185 style="padding-top:20px;" colspan=3>
+                  <b>Етаж</b>
+                </td>
+                <td width=15 rowspan=2><img src="//www.imot.bg/images/picturess/no.gif" width=15 height=1 border=0></td>
+                <td width=260 style="padding-top:20px;" colspan=5 rowspan=2>
+                  <input type="button" value="Т Ъ Р С И" style="width:260px; height:40px; font-weight:bold;" onclick="javasctipt:updr();document.search.f1.value='1';document.search.rub.value='1';sef_searchsubmit('3',document.search);" >
+                </td>
+              </tr>
+              <tr>
+                <td width=90 style="padding-top:5px;">
+                  от <select name="f31" class="sw70" onchange="changeFromFloor()" id="floorFrom"><option selected value="">
+<option value="1000">Само последен
+<option value="0">Партер
+<option value="1">1-ви
+<option value="2">2-ри
+<option value="3">3-ти
+<option value="4">4-ти
+<option value="5">5-ти
+<option value="6">6-ти
+<option value="7">7-ми
+<option value="8">8-ми
+<option value="9">9-ти
+<option value="10">10-ти
+<option value="11">11-ти
+<option value="12">12-ти
+<option value="13">13-ти
+<option value="14">14-ти
+<option value="15">15-ти
+<option value="16">16-ти
+<option value="17">17-ти
+<option value="18">18-ти
+<option value="19">19-ти
+<option value="20">20-ти
+<option value="21">21-ви
+<option value="22">22-ри
+<option value="23">23-ти
+<option value="24">24-ти
+<option value="25">25-ти
+<option value="26">26-ти
+<option value="27">27-ми
+<option value="28">28-ми
+<option value="29">29-ти
+<option value="30">30-ти
+<option value="31">31-ви
+<option value="32">32-ри
+<option value="33">33-ти
+<option value="34">34-ти
+<option value="35">35-ти
+<option value="36">36-ти
+<option value="37">37-ми
+<option value="38">38-ми
+<option value="39">39-ти
+<option value="40">40-ти
+<option value="41">41-ви
+<option value="42">42-ри
+<option value="43">43-ти
+<option value="44">44-ти
+<option value="45">45-ти
+<option value="46">46-ти
+<option value="47">47-ми
+<option value="48">48-ми
+<option value="49">49-ти
+</select>
+                </td>
+                <td width=5><img src="//www.imot.bg/images/picturess/no.gif" width=5 height=1 border=0></td>
+                <td width=90 style="padding-top:5px;">
+                  до <select name="f32" class="sw70" onchange="changeToFloor()" id="floorTo"><option selected value="">
+<option value="999">Без последен
+<option value="0">Партер
+<option value="1">1-ви
+<option value="2">2-ри
+<option value="3">3-ти
+<option value="4">4-ти
+<option value="5">5-ти
+<option value="6">6-ти
+<option value="7">7-ми
+<option value="8">8-ми
+<option value="9">9-ти
+<option value="10">10-ти
+<option value="11">11-ти
+<option value="12">12-ти
+<option value="13">13-ти
+<option value="14">14-ти
+<option value="15">15-ти
+<option value="16">16-ти
+<option value="17">17-ти
+<option value="18">18-ти
+<option value="19">19-ти
+<option value="20">20-ти
+<option value="21">21-ви
+<option value="22">22-ри
+<option value="23">23-ти
+<option value="24">24-ти
+<option value="25">25-ти
+<option value="26">26-ти
+<option value="27">27-ми
+<option value="28">28-ми
+<option value="29">29-ти
+<option value="30">30-ти
+<option value="31">31-ви
+<option value="32">32-ри
+<option value="33">33-ти
+<option value="34">34-ти
+<option value="35">35-ти
+<option value="36">36-ти
+<option value="37">37-ми
+<option value="38">38-ми
+<option value="39">39-ти
+<option value="40">40-ти
+<option value="41">41-ви
+<option value="42">42-ри
+<option value="43">43-ти
+<option value="44">44-ти
+<option value="45">45-ти
+<option value="46">46-ти
+<option value="47">47-ми
+<option value="48">48-ми
+<option value="49">49-ти
+</select>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        
+          <tr>
+            <td width=980 colspan=2 style="padding:5px 20px 0 20px;">
+              <div style="display:none;" id="business">
+                <table width=940 border=0 cellspacing=0 cellpadding=1>
+                  <tr><td width=940 colspan=4><b>Тип бизнес:</b></td></tr>
+                  <td valign=top width="25%"><label><input type="checkbox" class="bstypes" value="1" id="bs1" onclick="javascript:srcztcchange(this);">Автомивка</label><br>
+<label><input type="checkbox" class="bstypes" value="2" id="bs2" onclick="javascript:srcztcchange(this);">Автосервиз</label><br>
+<label><input type="checkbox" class="bstypes" value="3" id="bs3" onclick="javascript:srcztcchange(this);">Аптека</label><br>
+<label><input type="checkbox" class="bstypes" value="4" id="bs4" onclick="javascript:srcztcchange(this);">Банков офис</label><br>
+<label><input type="checkbox" class="bstypes" value="5" id="bs5" onclick="javascript:srcztcchange(this);">Бензиностанция/Газстанция</label><br>
+<label><input type="checkbox" class="bstypes" value="6" id="bs6" onclick="javascript:srcztcchange(this);">Клиника</label><br>
+</td><td valign=top width="25%"><label><input type="checkbox" class="bstypes" value="7" id="bs7" onclick="javascript:srcztcchange(this);">Лекарски кабинет</label><br>
+<label><input type="checkbox" class="bstypes" value="8" id="bs8" onclick="javascript:srcztcchange(this);">Ферма</label><br>
+<label><input type="checkbox" class="bstypes" value="9" id="bs9" onclick="javascript:srcztcchange(this);">СПА/Соларно студио</label><br>
+<label><input type="checkbox" class="bstypes" value="10" id="bs10" onclick="javascript:srcztcchange(this);">Стоматологичен кабинет</label><br>
+<label><input type="checkbox" class="bstypes" value="11" id="bs11" onclick="javascript:srcztcchange(this);">Търговски комплекс</label><br>
+<label><input type="checkbox" class="bstypes" value="12" id="bs12" onclick="javascript:srcztcchange(this);">Фабрика/Завод</label><br>
+</td><td valign=top width="25%"><label><input type="checkbox" class="bstypes" value="13" id="bs13" onclick="javascript:srcztcchange(this);">Фитнес зала</label><br>
+<label><input type="checkbox" class="bstypes" value="14" id="bs14" onclick="javascript:srcztcchange(this);">Фризьорски/Козметичен салон</label><br>
+<label><input type="checkbox" class="bstypes" value="15" id="bs15" onclick="javascript:srcztcchange(this);">Паркинг</label><br>
+<label><input type="checkbox" class="bstypes" value="16" id="bs16" onclick="javascript:srcztcchange(this);">Фотографско студио</label><br>
+<label><input type="checkbox" class="bstypes" value="17" id="bs17" onclick="javascript:srcztcchange(this);">Детски център</label><br>
+<label><input type="checkbox" class="bstypes" value="18" id="bs18" onclick="javascript:srcztcchange(this);">Аквапарк</label><br>
+</td><td valign=top width="25%"><label><input type="checkbox" class="bstypes" value="19" id="bs19" onclick="javascript:srcztcchange(this);">Вилно селище</label><br>
+<label><input type="checkbox" class="bstypes" value="20" id="bs20" onclick="javascript:srcztcchange(this);">Соларен парк</label><br>
+<label><input type="checkbox" class="bstypes" value="21" id="bs21" onclick="javascript:srcztcchange(this);">Дом за възрастни хора</label><br>
+<label><input type="checkbox" class="bstypes" value="22" id="bs22" onclick="javascript:srcztcchange(this);">Самостоятелна сграда</label><br>
+<label><input type="checkbox" class="bstypes" value="23" id="bs23" onclick="javascript:srcztcchange(this);">Хладилен склад</label><br>
+</td>
+                </table>
+                <input type="hidden" name="f54" value="">
+              </div>
+            </td>
+          </tr>
+          
+        
+      </table>
+      <table width=980 cellpadding=0 cellspacing=0 border=0 style="border:#900 1px solid; border-top:0;">
+        <tr>
+          <td width=540 valign="top" style="padding-top:15px; padding-left:20px; padding-right:10px; padding-bottom:20px;">
+            <table width=510 cellspacing=0 cellpadding=0 border=0>
+              <tr><td width=510><b>Местоположение на търсения от Вас Имот:</b></td></tr>
+              <tr>
+                <td width=510 style="padding-top:5px;">
+                  <select class="sw510" name="f38" onchange="ChangeImotDropDown(this)">
+                    <option value=""><option value="Гърция">Гърция
+<option value="град Благоевград">град&nbsp;&nbsp;&nbsp;&nbsp;Благоевград
+<option value="област Благоевград">област Благоевград
+<option value="град Бургас">град&nbsp;&nbsp;&nbsp;&nbsp;Бургас
+<option value="област Бургас">област Бургас
+<option value="град Варна">град&nbsp;&nbsp;&nbsp;&nbsp;Варна
+<option value="област Варна">област Варна
+<option value="град Велико Търново">град&nbsp;&nbsp;&nbsp;&nbsp;Велико Търново
+<option value="област Велико Търново">област Велико Търново
+<option value="град Видин">град&nbsp;&nbsp;&nbsp;&nbsp;Видин
+<option value="област Видин">област Видин
+<option value="град Враца">град&nbsp;&nbsp;&nbsp;&nbsp;Враца
+<option value="област Враца">област Враца
+<option value="град Габрово">град&nbsp;&nbsp;&nbsp;&nbsp;Габрово
+<option value="област Габрово">област Габрово
+<option value="град Добрич">град&nbsp;&nbsp;&nbsp;&nbsp;Добрич
+<option value="област Добрич">област Добрич
+<option value="град Кърджали">град&nbsp;&nbsp;&nbsp;&nbsp;Кърджали
+<option value="област Кърджали">област Кърджали
+<option value="град Кюстендил">град&nbsp;&nbsp;&nbsp;&nbsp;Кюстендил
+<option value="област Кюстендил">област Кюстендил
+<option value="град Ловеч">град&nbsp;&nbsp;&nbsp;&nbsp;Ловеч
+<option value="област Ловеч">област Ловеч
+<option value="град Монтана">град&nbsp;&nbsp;&nbsp;&nbsp;Монтана
+<option value="област Монтана">област Монтана
+<option value="град Пазарджик">град&nbsp;&nbsp;&nbsp;&nbsp;Пазарджик
+<option value="област Пазарджик">област Пазарджик
+<option value="град Перник">град&nbsp;&nbsp;&nbsp;&nbsp;Перник
+<option value="област Перник">област Перник
+<option value="град Плевен">град&nbsp;&nbsp;&nbsp;&nbsp;Плевен
+<option value="област Плевен">област Плевен
+<option value="град Пловдив">град&nbsp;&nbsp;&nbsp;&nbsp;Пловдив
+<option value="област Пловдив">област Пловдив
+<option value="град Разград">град&nbsp;&nbsp;&nbsp;&nbsp;Разград
+<option value="област Разград">област Разград
+<option value="град Русе">град&nbsp;&nbsp;&nbsp;&nbsp;Русе
+<option value="област Русе">област Русе
+<option value="град Силистра">град&nbsp;&nbsp;&nbsp;&nbsp;Силистра
+<option value="област Силистра">област Силистра
+<option value="град Сливен">град&nbsp;&nbsp;&nbsp;&nbsp;Сливен
+<option value="област Сливен">област Сливен
+<option value="град Смолян">град&nbsp;&nbsp;&nbsp;&nbsp;Смолян
+<option value="област Смолян">област Смолян
+<option value="град София">град&nbsp;&nbsp;&nbsp;&nbsp;София
+<option value="област София">област София
+<option value="град Стара Загора">град&nbsp;&nbsp;&nbsp;&nbsp;Стара Загора
+<option value="област Стара Загора">област Стара Загора
+<option value="град Търговище">град&nbsp;&nbsp;&nbsp;&nbsp;Търговище
+<option value="област Търговище">област Търговище
+<option value="град Хасково">град&nbsp;&nbsp;&nbsp;&nbsp;Хасково
+<option value="област Хасково">област Хасково
+<option value="град Шумен">град&nbsp;&nbsp;&nbsp;&nbsp;Шумен
+<option value="област Шумен">област Шумен
+<option value="град Ямбол">град&nbsp;&nbsp;&nbsp;&nbsp;Ямбол
+<option value="област Ямбол">област Ямбол
+<option value="world">Извън България
+
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td width=510 style="padding-top:5px;" valign="top">
+                  
+          <div style="width:510px; height:430px" id="fmap">
+            <div class="bgsvg" id="bg" style="margin:20px 0 0 0;">
+              <svg></svg>
+            </div>
+          </div>
+          <div style="z-index:2; position:relative; width=75; height:69px; margin-left:400px; margin-top:-120px;">
+          <a href="http://worldwide-search.imot.bg/en/HomePage" target="_blank"><img src="//www.imot.bg/images/picturess/map_world.gif" name="me" width=75 height=57 border=0 id="me" onMouseOver="MM_swapImage('me','','//www.imot.bg/images/picturess/map_world1.gif',1)" onMouseOut="MM_swapImgRestore()"></a>
+          </div>
+          
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td width=440 valign="top" style="padding-top:15px; padding-left:10px; padding-right:20px; padding-bottom:20px;">
+            <table width=410 cellspacing=0 cellpadding=0 border=0>
+              <tr>
+                <td width=185>Списък с районите:</td>
+                <td width=40>&nbsp;</td>
+                <td width=185>Избрани райони:&nbsp;&nbsp;<a href="javascript:delrightall();" class="iconLinks">Изчисти</a></td>
+              </tr>
+              <tr>
+                <td width=185 style="padding-top:5px;">
+                  <select id="ri" class="sw185" name="ri" size=11 ondblclick="javascript:toright()" onkeydown="javascript:if (window.event) if (window.event.keyCode==13) {document.search.actions.value='5';updr();document.search.submit();}">
+                    <option value="">
+                  </select>
+                </td>
+                <td width=40 align="center" valign="middle" style="padding-top:5px;">
+                  <img src="//www.imot.bg/images/picturess/arrow_down.gif" width=20 height=20 border=0 onclick="javascript:toright()"><br><br>
+                  <img src="//www.imot.bg/images/picturess/arrow_up.gif" width=20 height=20 border=0 onclick="javascript:delright()">
+                </td>
+                <td width=185 style="padding-top:5px;">
+                  <select id="rs" class="sw185" name="rs" size=11 ondblclick="javascript:delright()">
+                    <option value="">ВСИЧКИ РАЙОНИ
+                  </select>
+                </td>
+              </tr>
+              <tr>
+                <td width=410 colspan=3 style="padding-top:10px;">
+                  <a href="javascript:;" onclick="javascript:updr();document.search.f1.value='1';sef_searchsubmit('20',document.search);"><img src="//www.imot.bg/images/picturess/bannerpolygon2.jpg" width=410 height=100 border=0></a>
+                </td>
+              </tr>
+              <tr>
+                <td width=410 colspan=3 style="padding-top:10px;">
+                  Търсене по ключова дума: <input type="text" name="f42" value="" class="sw280" size=14 maxlength=40 style="width:252px">
+                </td>
+              </tr>
+              <tr>
+                <td width=410 colspan=3 style="padding-top:10px;">
+                  Търсене по Агенция:
+                </td>
+              </tr>
+              <tr>
+                <td width=410 colspan=3 style="padding-top:5px;">
+                  
+  <div class="agWrapper">
+    <ico id="ag_arrow" onclick="document.getElementById('ag_keyword').focus()" class="arrows" style="display:block; top:0;"></ico>
+    <span id="ag_close" onclick="selAGSearch('1','fe8','','')" class="close" style="display:none;top:0;"></span>
+    <input type="hidden" name="fe8" value="">
+    <input type="text" id="ag_keyword" value=""
+                 class="agCustomSelectInput"
+                 placeholder="Започнете да пишете името на Агенцията"
+                 autocomplete="off"
+                 onfocus="shAGSearch(1)"
+                 onkeyup="srcAGSearch('1','fe8',this.value)"
+                 maxlength="80">
+    <div class="agSearch" id="ag_search" style="display: none; top:40px;">
+      <div style="text-align: center; display: none; color: #F00; font-size: 14px;" id="ag_searchRes">Няма намерени резултати.</div>
+      <div class="scroll"></div>
+    </div>
+  </div>
+
+  
+                </td>
+              </tr>
+            </table>
+            <input type="hidden" name="f39" value="">
+            <input type="hidden" name="f40" value="">
+            
+          <div id="priceeff" style="display:none;">
+            <table cellpadding=0 cellspacing=0 border=0 style="width:410px; margin-top:15px;">
+              <tr>
+                <td style="width:410px; height:20px;" colspan=4>
+                  <a href="javascript:;" style="color:#000; text-decoration:none;" title="Процентното съотношение на цената на имота, спрямо средната цена за съответният регион. При отрицателни проценти цената е по-ниска от средната за избрания район. Данните са изключително на база обявените цени на имоти в сайта imot.bg">
+                    <b>Ценова изгодност:</b>
+                  </a>
+                  <div style="margin-top: 5px;">Цената на кв.м. жилищна площ на имота да</div>
+                </td>
+              </tr>
+              <tr>
+                <td style="width:110px; height:20px;">
+                  бъде от <select name="fe3" class="sw60" onchange="javascript:changepriceeffect(this)"><option selected value="">
+<option  value="+50">150%
+<option  value="+40">140%
+<option  value="+30">130%
+<option  value="+20">120%
+<option  value="+10">110%
+<option  value="0">100%
+<option  value="-10">90%
+<option  value="-20">80%
+<option  value="-30">70%
+<option  value="-40">60%
+<option  value="-50">50%
+</select>
+                </td>
+                <td style="width:5px; height:20px;">&nbsp;</td>
+                <td style="width:80px; height:20px;">
+                  до <select name="fe4" class="sw60" onchange="javascript:changepriceeffect(this)"><option selected value="">
+<option  value="+50">150%
+<option  value="+40">140%
+<option  value="+30">130%
+<option  value="+20">120%
+<option  value="+10">110%
+<option  value="0">100%
+<option  value="-10">90%
+<option  value="-20">80%
+<option  value="-30">70%
+<option  value="-40">60%
+<option  value="-50">50%
+</select>
+                </td>
+                <td style="width:215px; padding-bottom:3px; padding-left:5px;" valign="bottom">от средната цена на кв.м за района</td>
+              </tr>
+            </table>
+          </div>
+
+          <div id="areah" style="display:none;">
+            <table width=265 cellpadding=0 cellspacing=0 border=0 style="margin-top:15px;">
+              <tr>
+                <td style="width:185px; height:20px;" colspan=3>
+                  <b>Квадратура на двор:</b>(кв.м)
+                </td>
+                <td style="width:5px;" rowspan=2><img src="//www.imot.bg/images/picturess/no.gif" width=5 height=1 border=0></td>
+                <td style="width:75px;" rowspan=2 valign="bottom">&nbsp;за къщи<br>&nbsp;и вили</td>
+              </tr>
+              <tr>
+                <td style="width:90px;">
+                  от <input type="text" name="f45" value="" class="sw70" size=4 maxlength=6>
+                </td>
+                <td style="width:5px;"><img src="//www.imot.bg/images/picturess/no.gif" width=5 height=1 border=0></td>
+                <td style="width:90px;">
+                  до <input type="text" name="f46" value="" class="sw70" size=4 maxlength=6>
+                </td>
+              </tr>
+            </table>
+          </div>
+          
+            
+                  <div id="extritb" style="display:none;">
+                  <table width=410 border=0 cellspacing=0 cellpadding=0 style="margin-top:15px;">
+                    <tr><td width=410 colspan=3><b>Вид строителство:</b></td></tr>
+                    
+                    <td valign=top width="33%"><label><input type="checkbox" value="Панел" name="f61" >Панел</label><br>
+<label><input type="checkbox" value="Тухла" name="f62" >Тухла</label><br>
+</td><td valign=top width="33%"><label><input type="checkbox" value="ЕПК" name="f63" >ЕПК</label><br>
+<label><input type="checkbox" value="ПК" name="f64" >ПК</label><br>
+</td><td valign=top width="33%"><label><input type="checkbox" value="Гредоред" name="f65" >Гредоред</label><br>
+<label><input type="checkbox" value="Сглобяема конструкция" name="f66" >Сглобяема конструкция</label><br>
+</td>
+                  </table>
+                  
+              <table width=410 border=0 cellspacing=0 cellpadding=0 style="margin-top:5px;">
+                <tr>
+                  <td width=410 style="padding-bottom:3px;">
+                    <b>Година на строителство:</b>
+                  </td>
+                </tr>
+                <tr>
+                  <td width=410 style="padding-bottom:10px;">
+                    <label style="display:block;"><input type="checkbox" value="1" id="yb1" onclick="javascript:srcztcchange(this);"><b>Завършени</b> - Имоти въведени в експлоатация</label>
+                    <label style="display:block;"><input type="checkbox" value="2" id="yb2" onclick="javascript:srcztcchange(this);getElementById('yb3').click();"><b>В строеж</b> или имоти <b>НЕ</b> въведени в експлоатация</label>
+                    <label style="display:none;"><input type="checkbox" value="3" id="yb3" onclick="javascript:srcztcchange(this);">Имоти <b>НЕ</b> въведени в експлоатация</label>
+                    <input type="hidden" name="f57" value="">
+                  </td>
+                </tr>
+                <tr>
+                  <td width=410 style="padding-bottom:10px;">
+                    Година на въвеждане в експлоатация: от 
+                  <select name="f51" class="sw60">
+                    <option value="0">
+<option value="2040">2040
+<option value="2039">2039
+<option value="2038">2038
+<option value="2037">2037
+<option value="2036">2036
+<option value="2035">2035
+<option value="2034">2034
+<option value="2033">2033
+<option value="2032">2032
+<option value="2031">2031
+<option value="2030">2030
+<option value="2029">2029
+<option value="2028">2028
+<option value="2027">2027
+<option value="2026">2026
+<option value="2025">2025
+<option value="2024">2024
+<option value="2023">2023
+<option value="2022">2022
+<option value="2021">2021
+<option value="2020">2020
+<option value="2019">2019
+<option value="2018">2018
+<option value="2017">2017
+<option value="2016">2016
+<option value="2015">2015
+<option value="2014">2014
+<option value="2013">2013
+<option value="2012">2012
+<option value="2011">2011
+<option value="2010">2010
+<option value="2009">2009
+<option value="2008">2008
+<option value="2007">2007
+<option value="2006">2006
+<option value="2005">2005
+<option value="2004">2004
+<option value="2003">2003
+<option value="2002">2002
+<option value="2001">2001
+<option value="2000">2000
+<option value="1999">1999
+<option value="1998">1998
+<option value="1997">1997
+<option value="1996">1996
+<option value="1995">1995
+<option value="1994">1994
+<option value="1993">1993
+<option value="1992">1992
+<option value="1991">1991
+<option value="1990">1990
+<option value="1980">1980
+<option value="1970">1970
+<option value="1960">1960
+<option value="1950">1950
+<option value="1940">1940
+<option value="1930">1930
+<option value="1920">1920
+
+                  </select>
+                   до 
+                  <select name="f52" class="sw60">
+                    <option value="0">
+<option value="2040">2040
+<option value="2039">2039
+<option value="2038">2038
+<option value="2037">2037
+<option value="2036">2036
+<option value="2035">2035
+<option value="2034">2034
+<option value="2033">2033
+<option value="2032">2032
+<option value="2031">2031
+<option value="2030">2030
+<option value="2029">2029
+<option value="2028">2028
+<option value="2027">2027
+<option value="2026">2026
+<option value="2025">2025
+<option value="2024">2024
+<option value="2023">2023
+<option value="2022">2022
+<option value="2021">2021
+<option value="2020">2020
+<option value="2019">2019
+<option value="2018">2018
+<option value="2017">2017
+<option value="2016">2016
+<option value="2015">2015
+<option value="2014">2014
+<option value="2013">2013
+<option value="2012">2012
+<option value="2011">2011
+<option value="2010">2010
+<option value="2009">2009
+<option value="2008">2008
+<option value="2007">2007
+<option value="2006">2006
+<option value="2005">2005
+<option value="2004">2004
+<option value="2003">2003
+<option value="2002">2002
+<option value="2001">2001
+<option value="2000">2000
+<option value="1999">1999
+<option value="1998">1998
+<option value="1997">1997
+<option value="1996">1996
+<option value="1995">1995
+<option value="1994">1994
+<option value="1993">1993
+<option value="1992">1992
+<option value="1991">1991
+<option value="1990">1990
+<option value="1989">1989
+<option value="1979">1979
+<option value="1969">1969
+<option value="1959">1959
+<option value="1949">1949
+<option value="1939">1939
+<option value="1929">1929
+
+                  </select>
+                   г.
+                  </td>
+                </tr>
+              </table>
+              
+                  </div>
+                  
+                  <div id="extri1" style="display:none;">
+                  <table width=410 border=0 cellspacing=0 cellpadding=0 style="margin-top:15px;">
+                    <tr><td width=410 colspan=3><b>Особености:</b></td></tr>
+                    
+                    <td valign=top width="33%"><label><input type="checkbox" value="С преход" name="f67" >С преход</label><br>
+<label><input type="checkbox" value="Асансьор" name="f68" >Асансьор</label><br>
+<label><input type="checkbox" value="С гараж" name="f69" >С гараж</label><br>
+<label><input type="checkbox" value="С паркинг" name="f70" >С паркинг</label><br>
+<label><input type="checkbox" value="Лизинг" name="f71" >Лизинг</label><br>
+<label><input type="checkbox" value="Ипотекиран" name="f72" >Ипотекиран</label><br>
+</td><td valign=top width="33%"><label><input type="checkbox" value="Бартер" name="f73" >Бартер</label><br>
+<label><input type="checkbox" value="Интернет връзка" name="f74" >Интернет връзка</label><br>
+<label><input type="checkbox" value="С действащ бизнес" name="f75" >С действащ бизнес</label><br>
+<label><input type="checkbox" value="Обзаведен" name="f76" >Обзаведен</label><br>
+<label><input type="checkbox" value="Видео наблюдение" name="f77" >Видео наблюдение</label><br>
+<label><input type="checkbox" value="Контрол на достъпа" name="f78" >Контрол на достъпа</label><br>
+</td><td valign=top width="33%"><label><input type="checkbox" value="Охрана" name="f79" >Охрана</label><br>
+<label><input type="checkbox" value="Саниран" name="f80" >Саниран</label><br>
+<label><input type="checkbox" value="В затворен комплекс" name="f81" >В затворен комплекс</label><br>
+<label><input type="checkbox" value="За ремонт" name="f82" >За ремонт</label><br>
+<label><input type="checkbox" value="Възможност за дан. кредит" name="f83" >Възможност за дан. кредит</label><br>
+</td>
+                  </table>
+                  
+              <table width=410 border=0 cellspacing=0 cellpadding=0 style="margin-top:5px;">
+                <tr>
+                  <td width=120 valign="bottom">
+                    ТЕЦ: <select name="f33" class="s80"><option selected value="">
+<option value="ДА">ДА
+<option value="НЕ">НЕ
+<option value="ЛО">Лок.отопл.
+<option value="ПР">Прокарва се
+</select>
+                  </td>
+                  <td width=10><img src="//www.imot.bg/images/picturess/no.gif" width=10 height=1 border=0></td>
+                  <td width=120 valign="bottom">
+                    Газ: <select name="f34" class="s80"><option selected value="">
+<option value="ДА">ДА
+<option value="НЕ">НЕ
+</select>
+                  </td>
+                  <td width=160>&nbsp;</td>
+                </tr>
+              </table>
+              
+                  </div>
+                  
+                  <div id="extrip" style="display:none;">
+                  <table width=410 border=0 cellspacing=0 cellpadding=0 style="margin-top:15px;">
+                    <tr><td width=410 colspan=3><b>Особености:</b></td></tr>
+                    
+                    <td valign=top width="33%"><label><input type="checkbox" value="Виза" name="f84" >Виза</label><br>
+<label><input type="checkbox" value="За пром.строителство" name="f85" >За пром.строителство</label><br>
+<label><input type="checkbox" value="Обезщетение" name="f86" >Обезщетение</label><br>
+</td><td valign=top width="33%"><label><input type="checkbox" value="За жил.строителство" name="f87" >За жил.строителство</label><br>
+<label><input type="checkbox" value="Бартер" name="f88" >Бартер</label><br>
+<label><input type="checkbox" value="С действащ бизнес" name="f89" >С действащ бизнес</label><br>
+</td><td valign=top width="33%"><label><input type="checkbox" value="За ремонт" name="f90" >За ремонт</label><br>
+<label><input type="checkbox" value="Възможност за дан. кредит" name="f91" >Възможност за дан. кредит</label><br>
+</td>
+                  </table>
+                  
+              <table width=410 border=0 cellspacing=0 cellpadding=0 style="margin-top:5px;">
+                <td width=120 valign="bottom">
+                  Ток: <select name="f35" class="s80"><option selected value="">
+<option value="ДА">ДА
+<option value="НЕ">НЕ
+</select>
+                </td>
+                <td width=10><img src="//www.imot.bg/images/picturess/no.gif" width=10 height=1 border=0></td>
+                <td width=120 valign="bottom">
+                  Вода: <select name="f36" class="s80"><option selected value="">
+<option value="ДА">ДА
+<option value="НЕ">НЕ
+</select>
+                </td>
+                <td width=10><img src="//www.imot.bg/images/picturess/no.gif" width=10 height=1 border=0></td>
+                <td width=150 valign="bottom">
+                  Регулация: <select name="f37" class="s80"><option selected value="">
+<option value="ДА">ДА
+<option value="НЕ">НЕ
+</select>
+                </td>
+              </table>
+              
+                  </div>
+                  
+            
+      <table width=400 border=0 cellspacing=0 cellpadding=0 style="margin-top:15px;">
+        <tr><td><span style="color:#900; font-weight:bold;padding-bottom: 3px;">Допълнителен филтър:</span></td></tr>
+        <tr><td><label><input type="checkbox" name="fe1" value="1"> Само обяви със снимка</label></td></tr>
+        <tr><td><label><input type="checkbox" name="fe9" value="1"> Само обяви с видео</td></tr>
+        
+      </table>
+      <input type="hidden" value="0" name="fe2">
+      
+          </td>
+        </tr>
+      </table>
+      </form>
+      <script type="text/javascript">window.addEventListener("click", onClickOutsideSrc);</script>
+      
+  
+  <div class="seoBox" id="seoBox" style="margin:0">
+                   
+                 </div>
+  <div style="width:100%; margin-top:10px; text-align: right;">
+    <a href="//www.imot.bg/contacts" class="footLinks1" style="font-weight:normal; color:#900; text-decoration:underline;">Въпроси и предложения към imot.bg</a>
+  </div>
+  <div style="width:100%; margin-top:10px;">
+    <a href="//www.imot.bg/contacts" class="footLinks1">КОНТАКТИ</a> |
+    <a href="//www.imot.bg/pcgi/imot.cgi?act=12" class="footLinks1">SMS КОДОВЕ</a> |
+    <a href="//www.imot.bg/help" class="footLinks1">ПОМОЩ</a> |
+    <a href="//www.imot.bg/obshti-uslovia" class="footLinks1">ОБЩИ УСЛОВИЯ</a> |
+    <a href="https://rezonmedia.bg/tarifi/imot" class="footLinks1" target="_blank">РЕКЛАМА</a> |
+    <a href="//www.imot.bg/zashtita-na-lichni-danni" class="footLinks1">ЗАЩИТА НА ЛИЧНИТЕ ДАННИ</a> |
+    <a href="//www.imot.bg/sitemap" class="footLinks1">КАРТА НА САЙТА</a> |
+  </div>
+  <div style="margin-top:10px; background-color: #900; color:#FFF; padding-left:10px; height:26px; line-height:26px;">
+    <a href="https://rezonmedia.bg" target="_blank" class="footLinks2">Резон Медия</a> |
+    <a href="http://www.mobile.bg" target="_blank" class="footLinks2" title="Mobile.bg – Българският автомобилен пазар: нови и втора употреба автомобили, джипове, камиони, мотоциклети...">Автомобили</a> |
+    <a href="https://www.zaplata.bg" target="_blank" class="footLinks2" title="Обяви за работа в България и чужбина">Работа</a> |
+    <a href="https://www.fakti.bg" target="_blank" class="footLinks2" title="Събития от България и света">Новини</a> |
+    <a href="https://bazar.bg" target="_blank" class="footLinks2">Обяви</a>
+    <span style="float: right; margin-right:5px;">2002-2026 &reg;  Copyright imot.bg</span>
+  </div>
+  <div id="mob_version" style="width:100%; text-align:center;"></div>
+  <script>
+    var mvc=getCookie('full');
+    var mvd=document.getElementById("mob_version");
+    if ( mvd && (mvc==1) )
+      mvd.innerHTML='<br><a href="https://m.imot.bg" class="footLinks1" onclick="document.cookie=\'full=0; expires=Thu, 01 Jan 1970 00:00:01 GMT; path=/; domain=.imot.bg\'"><u>Мобилна версия</u></a>';
+  </script>
+  <div class="hosting">© <strong>imot.bg</strong> ползва и препоръчва <strong>хостинг услугите</strong> на <a href="https://bulinfo.net" target="_blank"><strong><img src="//www.imot.bg/images/picturess/bulinfo-logo.svg" alt="Bulinfo.net"></strong></a></div>
+  <div class="follow-us">
+    <div>Следвайте ни в:</div>
+    <a href="https://www.instagram.com/imot.bg/?igsh=MXd6emtpd3kyb2E3dQ%3D%3D" class="follow-us-instagram" target="_blank" title="Последвай ни в Instagram"></a>
+    <a href="https://www.tiktok.com/@imot_bg?_t=ZN-8yTupjIOizC" class="follow-us-tiktok" target="_blank" title="Последвай ни в TikTok"></a>
+    <a href="https://www.facebook.com/imot.bg" class="follow-us-facebook" target="_blank" title="Последвай ни в Facebook"></a>
+    <a href="https://www.youtube.com/@Imot.bg_Official" class="follow-us-youtube" target="_blank" title="Последвай ни в YouTube"></a>
+  </div>
+  
+  
+      </div>
+
+      <br>
+      <div id="logtable" class="LB-white-content" style="width:530px; height:450px;"></div>
+      <div id="sendpmessage" class="LB-white-content" style="width:590px; height:465px; left: 20%; position: absolute; top: 50px; display: none;"></div>
+
+      <script>cleverLinks();</script>
+
+      
+
+      
+      <script type="application/ld+json">
+      
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Imot.bg",
+    "url": "https://www.imot.bg/",
+    "logo": "https://www.imot.bg/images/picturess/logo.svg",
+    "description": "Imot.bg - №1 сайт за имоти от собственици и брокери",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "ул. Карнеги 11а",
+      "addressLocality": "София",
+      "postalCode": "1000",
+      "addressCountry": "BG"
+    },
+    "email": "help-imot@bulinfo.net",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": [
+      "0879440566"
+      ],
+      "contactType": "customer service",
+      "areaServed": "BG",
+      "availableLanguage": ["Bulgarian"]
+    },
+    "sameAs": [
+      "https://www.facebook.com/imot.bg",
+      "https://www.instagram.com/imot.bg/",
+      "https://www.tiktok.com/@imot_bg",
+      "https://www.youtube.com/@Imot.bg_Official"
+    ]
+  }
+      </script>
+
+      <!-- (C)2000-2014 Gemius SA - gemiusAudience / imot.bg / Home Page -->
+      <script type="text/javascript">
+      <!--//--><![CDATA[//><!--
+      var pp_gemius_identifier = 'p8ZKf3ughze7qeDBCa1hhJQ5XkGiDSOqlz_uKt6qu_X.M7';
+      // lines below shouldn't be edited
+      function gemius_pending(i) { window[i] = window[i] || function() {var x = window[i+'_pdata'] = window[i+'_pdata'] || []; x[x.length]=arguments;};};
+      gemius_pending('gemius_hit'); gemius_pending('gemius_event'); gemius_pending('pp_gemius_hit'); gemius_pending('pp_gemius_event');
+      (function(d,t) {try {var gt=d.createElement(t),s=d.getElementsByTagName(t)[0],l='http'+((location.protocol=='https:')?'s':''); gt.setAttribute('async','async');
+      gt.setAttribute('defer','defer'); gt.src=l+'://gabg.hit.gemius.pl/xgemius.js'; s.parentNode.insertBefore(gt,s);} catch (e) {}})(document,'script');
+      //--><!]]>
+      </script>
+
+      <!--  -->
+      </body>
+    </html>
+    
