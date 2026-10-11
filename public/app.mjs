@@ -1684,9 +1684,37 @@ function openSearch() {
   pollJob();
 }
 
+/** Range fields and their labels, to point at the first one imot.bg would get wrong. */
+const SF_RANGES = [['priceMin', 'priceMax'], ['ppmMin', 'ppmMax', 'sfPpm'], ['areaMin', 'areaMax', 'sfArea'], ['yardMin', 'yardMax', 'sfYard'], ['yearFrom', 'yearTo', 'sfYear']];
+
+/** First invalid field among those that will be sent: { name, text }, or null. */
+function sfInvalid(q) {
+  const label = (key) => t(key || (q.deal === 'rent' ? 'sfRentPrice' : 'sfPrice'));
+  for (const el of $$('#sfFields input[type="number"]')) {
+    const range = SF_RANGES.find((r) => r.slice(0, 2).includes(el.name));
+    if (!range || el.closest('[hidden]')) continue; // hidden sections are not sent
+    if (el.validity.badInput || (q[el.name] !== '' && el.validity.rangeUnderflow)) return { name: el.name, text: t('sfNumberError', { field: label(range[2]) }) };
+  }
+  for (const [a, b, key] of SF_RANGES) {
+    if (q[a] !== '' && q[b] !== '' && Number(q[a]) > Number(q[b])) return { name: a, text: t('sfRangeError', { field: label(key) }) };
+  }
+  return null;
+}
+
 async function submitSearch() {
   sfRead();
   if (!S.sf.form || S.sf.busy || S.sf.loading || sfRunning()) return;
+  for (const el of $$('#sfFields [aria-invalid]')) el.removeAttribute('aria-invalid');
+  const bad = sfInvalid(sfPayload());
+  if (bad) {
+    const el = $(`#sfFields [name="${bad.name}"]`);
+    el.closest('details')?.setAttribute('open', '');
+    el.setAttribute('aria-invalid', 'true');
+    S.sf.note = { text: bad.text, error: true };
+    sfUpdateFoot();
+    el.focus();
+    return;
+  }
   S.sf.busy = true;
   S.sf.note = null;
   sfUpdateFoot();
