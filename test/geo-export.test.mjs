@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import os from 'node:os';
 import path from 'node:path';
+import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { Gazetteer } from '../lib/gazetteer.mjs';
 import { buildStandaloneHtml } from '../lib/export.mjs';
@@ -35,6 +37,29 @@ test('standalone export is one self-contained, parseable HTML file', async () =>
   assert.ok(scripts.length >= 3);
   for (const s of scripts) assert.doesNotThrow(() => new vm.Script(s), 'inline script parses');
   assert.ok(!/^\s*(import|export)\s/m.test(scripts.at(-1)), 'module syntax stripped');
+});
+
+test('standalone export embeds the vendored font instead of linking vendor/ files', async () => {
+  const data = { listings: [], sources: {}, updatedAt: null };
+  const real = await buildStandaloneHtml({ root: ROOT, data });
+  assert.ok(!real.includes('url("vendor/'), 'real export has no url("vendor/...") references');
+  // Same build with a stylesheet that is guaranteed to reference the font (twice).
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'imot-export-'));
+  try {
+    for (const dir of ['public', 'shared']) await cp(path.join(ROOT, dir), path.join(tmp, dir), { recursive: true });
+    const face = '@font-face { font-family: "Geist"; src: url("vendor/geist/Geist-Variable.woff2") format("woff2"); }\n';
+    const css = await readFile(path.join(ROOT, 'public/styles.css'), 'utf8');
+    await writeFile(path.join(tmp, 'public/styles.css'), face + face + css);
+    const html = await buildStandaloneHtml({ root: tmp, data });
+    assert.ok(!html.includes('url("vendor/'), 'no url("vendor/...") left');
+    const urls = [...html.matchAll(/url\("data:font\/woff2;base64,([A-Za-z0-9+/=]+)"\)/g)];
+    const own = (css.match(/url\("vendor\/geist\//g) || []).length; // the real stylesheet's own references
+    assert.equal(urls.length, 2 + own);
+    const font = await readFile(path.join(ROOT, 'public/vendor/geist/Geist-Variable.woff2'));
+    assert.ok(Buffer.from(urls[0][1], 'base64').equals(font), 'embedded bytes match the woff2 file');
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
 });
 
 test('villages inside a city municipality are mapped as villages, not city neighbourhoods', async () => {
