@@ -45,8 +45,9 @@ The CLI and the server share `data/`. The server picks up changes made by the CL
 ## Features
 
 - **Table**: full-text search (Latin or Cyrillic, so `bov` finds `Бов`), sort by any column, filters for
-  property type, place, province, price, area and yard, starred-only, “new since last import”, and
-  “hide no longer listed”. Columns collapse on narrow screens.
+  property type, place, province, price, area and yard, starred-only, “new since last import”,
+  “hide no longer listed”, and “only listings not on the map” (also toggled by clicking the map's
+  “could not be placed” note). Columns collapse on narrow screens.
 - **Map** (Leaflet + OpenStreetMap): one circle per city/village (or per neighbourhood in big cities). Size shows
   the number of listings, colour shows the median €/m². Click a circle for the place's listings, or filter the
   table to it. Hovering a table row highlights its place on the map.

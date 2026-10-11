@@ -52,6 +52,7 @@
         <label class="check"><input type="checkbox" id="fStarred"> <span data-i18n="onlyStarred"></span></label>
         <label class="check" id="fNewWrap"><input type="checkbox" id="fNew"> <span data-i18n="onlyNew"></span></label>
         <label class="check" id="fStaleWrap"><input type="checkbox" id="fHideStale"> <span data-i18n="hideStale"></span></label>
+        <label class="check" id="fUnmappedWrap"><input type="checkbox" id="fUnmapped"> <span id="fUnmappedLabel"></span></label>
         <button type="button" id="btnReset" class="btn link" data-i18n="reset">Reset</button>
       </div>
     </form>
@@ -71,7 +72,7 @@
 
   <section class="map-pane" aria-label="Map">
     <div id="map"></div>
-    <div id="unmapped" class="map-note" hidden></div>
+    <button type="button" id="unmapped" class="map-note" aria-pressed="false" hidden></button>
   </section>
 </main>
 

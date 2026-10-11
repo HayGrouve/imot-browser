@@ -210,7 +210,10 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: now
 .map-note {
   position: absolute; left: 10px; bottom: 24px; z-index: 500; max-width: 60%;
   background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 12px; color: var(--text-2); box-shadow: var(--shadow);
+  cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 2px;
 }
+.map-note:hover { color: var(--text); border-color: var(--border-strong); }
+.map-note[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); text-decoration: none; }
 .mk-wrap { background: none; border: 0; }
 .mk {
   display: flex; align-items: center; justify-content: center;

@@ -22,12 +22,14 @@ function saveJson(key, value) {
   try { localStorage.setItem(STORE_KEY + key, JSON.stringify(value)); } catch { /* private mode / quota */ }
 }
 
-const DEFAULT_FILTERS = { q: '', deal: '', type: '', oblast: '', place: '', priceMin: null, priceMax: null, areaMin: null, areaMax: null, yardMin: null, starred: false, onlyNew: false, hideStale: false };
+const DEFAULT_FILTERS = { q: '', deal: '', type: '', oblast: '', place: '', priceMin: null, priceMax: null, areaMin: null, areaMax: null, yardMin: null, starred: false, onlyNew: false, hideStale: false, unmapped: false };
 const ui = {
   lang: null, sort: { key: 'price', dir: 1 }, pageSize: 50, groupMode: 'settlement',
   ...loadJson('ui', {}),
 };
 ui.filters = { ...DEFAULT_FILTERS, ...(ui.filters || {}) };
+// Older versions filtered unmapped listings through the place dropdown.
+if (ui.filters.place === '__none') { ui.filters.place = ''; ui.filters.unmapped = true; }
 const stars = new Set(loadJson('stars', []));
 const notes = loadJson('notes', {});
 let saveUiTimer = null;
@@ -155,8 +157,10 @@ function groupOf(l, mode = ui.groupMode) {
   return { key: p.key, lat: p.lat, lon: p.lon, place: p };
 }
 
+/** No coordinates at all (not even the settlement could be located), so the listing is not on the map. */
+const isUnmapped = (l) => !l.place || l.place.lat == null;
+
 function matchesPlace(l, key) {
-  if (key === '__none') return !l.place;
   if (key.startsWith('nb:')) return groupOf(l, 'neighborhood')?.key === key;
   return l.place?.key === key;
 }
@@ -181,6 +185,7 @@ function applyFilters({ keepPage = false } = {}) {
     if (f.starred && !stars.has(l.id)) return false;
     if (f.onlyNew && !l._new) return false;
     if (f.hideStale && l._stale) return false;
+    if (f.unmapped && !isUnmapped(l)) return false;
     for (const term_ of terms) if (!l._search.includes(term_)) return false;
     return true;
   });
@@ -276,13 +281,14 @@ function renderFilterOptions() {
 
   const places = new Map();
   for (const l of S.listings) {
-    const k = l.place?.key || '__none';
-    const e = places.get(k) || { n: 0, label: l.place ? listingPlace(l) : `— ${t('notOnMap')}` };
+    if (isUnmapped(l)) continue; // covered by the "Not on map" toggle
+    const k = l.place.key;
+    const e = places.get(k) || { n: 0, label: listingPlace(l) };
     e.n++; places.set(k, e);
   }
   const collator = new Intl.Collator(locale());
   setOptions($('#fPlace'), t('allPlaces'),
-    [...places].sort((a, b) => (a[0] === '__none') - (b[0] === '__none') || collator.compare(a[1].label, b[1].label))
+    [...places].sort((a, b) => collator.compare(a[1].label, b[1].label))
       .map(([k, e]) => [k, e.label, e.n]), f.place.startsWith('nb:') ? '' : f.place);
 
   $('#fQ').value = f.q;
@@ -294,6 +300,11 @@ function renderFilterOptions() {
   $('#fHideStale').checked = f.hideStale;
   $('#fNewWrap').hidden = !S.listings.some((l) => l._new) && !f.onlyNew;
   $('#fStaleWrap').hidden = !S.listings.some((l) => l._stale) && !f.hideStale;
+  const unmappedCount = S.listings.filter(isUnmapped).length;
+  $('#fUnmapped').checked = f.unmapped;
+  $('#fUnmappedLabel').textContent = t('onlyUnmapped', { n: fmtNum(unmappedCount) });
+  $('#fUnmappedWrap').hidden = !unmappedCount && !f.unmapped;
+  $('#fUnmappedWrap').title = t('onlyUnmappedTitle');
 }
 
 function renderResultBar() {
@@ -539,9 +550,11 @@ function renderMap() {
   }
   renderMapTools();
   renderLegend(breaks, list.some((g) => g.medPpm == null));
+  // Clickable note: switches the "Not on map" filter on/off.
   const note = $('#unmapped');
   note.hidden = !unmapped;
-  note.textContent = unmapped ? t('unmapped', { n: fmtNum(unmapped) }) : '';
+  note.textContent = ui.filters.unmapped ? t('unmappedActive') : t('unmapped', { n: fmtNum(unmapped) });
+  note.setAttribute('aria-pressed', String(ui.filters.unmapped));
   if (!S.fitted && list.length) { fitMap(); S.fitted = true; }
 }
 
@@ -856,6 +869,12 @@ function bindEvents() {
   $('#fStarred').addEventListener('change', onFilter('starred', (el) => el.checked));
   $('#fNew').addEventListener('change', onFilter('onlyNew', (el) => el.checked));
   $('#fHideStale').addEventListener('change', onFilter('hideStale', (el) => el.checked));
+  $('#fUnmapped').addEventListener('change', onFilter('unmapped', (el) => el.checked));
+  $('#unmapped').addEventListener('click', () => {
+    ui.filters.unmapped = !ui.filters.unmapped;
+    renderFilterOptions();
+    applyFilters();
+  });
   $('#btnReset').addEventListener('click', () => {
     ui.filters = { ...DEFAULT_FILTERS };
     renderFilterOptions();
