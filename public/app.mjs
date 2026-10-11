@@ -24,7 +24,7 @@ function saveJson(key, value) {
 
 const DEFAULT_FILTERS = { q: '', deal: '', type: '', oblast: '', place: '', priceMin: null, priceMax: null, areaMin: null, areaMax: null, yardMin: null, starred: false, onlyNew: false, hideStale: false, unmapped: false };
 const ui = {
-  lang: null, sort: { key: 'price', dir: 1 }, pageSize: 50, groupMode: 'settlement',
+  lang: null, sort: { key: 'price', dir: 1 }, pageSize: 50, groupMode: 'settlement', baseLayer: 'map',
   ...loadJson('ui', {}),
 };
 ui.filters = { ...DEFAULT_FILTERS, ...(ui.filters || {}) };
@@ -412,15 +412,86 @@ function renderPager() {
 
 // ---------------------------------------------------------------- rendering: map
 
+// Base maps — free tile services that need no API key (Google's tiles may only be used via its API).
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+const ESRI_REF = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference';
+const BASE_LAYERS = {
+  map: {
+    label: 'layerMap', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    opts: { maxNativeZoom: 19, attribution: OSM_ATTR },
+  },
+  satellite: {
+    label: 'layerSatellite', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    opts: { maxNativeZoom: 18, attribution: 'Imagery &copy; <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics' },
+    // Roads and place names on top of the imagery, like Google's satellite view.
+    overlays: [`${ESRI_REF}/World_Transportation/MapServer/tile/{z}/{y}/{x}`, `${ESRI_REF}/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`],
+  },
+  terrain: {
+    label: 'layerTerrain', url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    opts: { subdomains: 'abc', maxNativeZoom: 17, attribution: `${OSM_ATTR}, SRTM · style &copy; <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)` },
+  },
+  light: {
+    label: 'layerLight', url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    opts: { subdomains: 'abcd', maxNativeZoom: 20, attribution: `${OSM_ATTR} &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>` },
+  },
+};
+
+function setBaseLayer(key) {
+  const name = BASE_LAYERS[key] ? key : 'map';
+  const def = BASE_LAYERS[name];
+  for (const l of S.base || []) S.map.removeLayer(l);
+  S.base = [
+    L.tileLayer(def.url, { maxZoom: 18, zIndex: 1, ...def.opts }),
+    ...(def.overlays || []).map((url) => L.tileLayer(url, { maxZoom: 18, maxNativeZoom: 18, zIndex: 2 })),
+  ];
+  for (const l of S.base) l.addTo(S.map);
+  ui.baseLayer = name;
+  saveUi();
+  renderLayerSwitch();
+}
+
+/** Tile of the current map centre in a given style — a live preview, like Google Maps' layer picker. */
+function previewTile(def) {
+  const c = S.map.getCenter();
+  const z = Math.max(5, Math.min(14, Math.round(S.map.getZoom()) - 1));
+  const n = 2 ** z;
+  const lat = (c.lat * Math.PI) / 180;
+  const x = Math.floor(((c.lng + 180) / 360) * n);
+  const y = Math.floor(((1 - Math.log(Math.tan(lat) + 1 / Math.cos(lat)) / Math.PI) / 2) * n);
+  return L.Util.template(def.url, { s: 'a', z, x, y, r: '' });
+}
+
+function renderLayerSwitch(open = false) {
+  const el = S.layerSwitch.getContainer();
+  const icon = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3 2 8.5l10 5.5 10-5.5L12 3Z" fill="currentColor"/><path d="m2 12.5 10 5.5 10-5.5M2 16.5 12 22l10-5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+  el.innerHTML = `
+<button type="button" class="ls-toggle" data-layers-toggle aria-expanded="${open}" aria-controls="lsPanel" title="${esc(t('mapType'))}" aria-label="${esc(t('mapType'))}">${icon}</button>
+${open ? `<div class="ls-panel" id="lsPanel" role="group" aria-label="${esc(t('mapType'))}">${Object.entries(BASE_LAYERS).map(([k, def]) => `
+<button type="button" class="ls-opt" data-base="${k}" aria-pressed="${k === ui.baseLayer}"><img src="${esc(previewTile(def))}" alt="" width="64" height="64"><span>${esc(t(def.label))}</span></button>`).join('')}
+</div>` : ''}`;
+  S.layerSwitchOpen = open;
+}
+
 function initMap() {
   if (!window.L) { $('#map').textContent = 'Map library failed to load.'; return; }
-  const map = L.map('map', { zoomSnap: 0.5 }).setView([42.75, 25.3], 7);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a>',
-  }).addTo(map);
-  S.layer = L.layerGroup().addTo(map);
+  const map = L.map('map', { zoomSnap: 0.5, maxZoom: 18 }).setView([42.75, 25.3], 7);
   S.map = map;
+  map.attributionControl.addAttribution('<a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a>');
+  const LayerSwitch = L.Control.extend({
+    onAdd() {
+      const el = L.DomUtil.create('div', 'layer-switch');
+      L.DomEvent.disableClickPropagation(el);
+      L.DomEvent.disableScrollPropagation(el);
+      return el;
+    },
+  });
+  S.layerSwitch = new LayerSwitch({ position: 'topleft' }).addTo(map);
+  setBaseLayer(ui.baseLayer);
+  map.on('click', () => { if (S.layerSwitchOpen) renderLayerSwitch(false); });
+  map.getContainer().addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && S.layerSwitchOpen) { renderLayerSwitch(false); $('[data-layers-toggle]').focus(); }
+  });
+  S.layer = L.layerGroup().addTo(map);
 
   const Tools = L.Control.extend({
     onAdd() {
@@ -451,6 +522,9 @@ function initMap() {
       $('.list-pane').scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
+    if (e.target.closest('[data-layers-toggle]')) { renderLayerSwitch(!S.layerSwitchOpen); return; }
+    const base = e.target.closest('[data-base]');
+    if (base) { setBaseLayer(base.dataset.base); return; }
     const mode = e.target.closest('[data-group]');
     if (mode) { ui.groupMode = mode.dataset.group; renderMap(); saveUi(); return; }
     if (e.target.closest('[data-fit]')) fitMap();
@@ -987,6 +1061,7 @@ function bindEvents() {
     if (S.job) renderJob();
     if ($('#detailDlg').open) renderDetail();
     S.map?.closePopup();
+    if (S.map) renderLayerSwitch(false);
   });
   $('#btnAbout').addEventListener('click', () => $('#aboutDlg').showModal());
   const menu = $('#exportMenu');

@@ -50,7 +50,8 @@ The CLI and the server share `data/`. The server picks up changes made by the CL
   “could not be placed” note). Columns collapse on narrow screens.
 - **Map** (Leaflet + OpenStreetMap): one circle per city/village (or per neighbourhood in big cities). Size shows
   the number of listings, colour shows the median €/m². Click a circle for the place's listings, or filter the
-  table to it. Hovering a table row highlights its place on the map.
+  table to it. Hovering a table row highlights its place on the map. Switch between map, satellite (with
+  roads and place names), terrain and light base maps, like in Google Maps.
 - **Listing details**: photo gallery, price and €/m², area, yard, floor, construction, heating, features,
   full description, agency / broker / phone, price history across imports, a link to the original, and a
   private note.
@@ -132,4 +133,6 @@ test/                   node:test suites with real-page fixtures
 ## Credits
 
 Place data © [GeoNames](https://www.geonames.org) (CC BY 4.0). Map data and geocoding ©
-[OpenStreetMap contributors](https://www.openstreetmap.org/copyright) (ODbL). [Leaflet](https://leafletjs.com) (BSD-2-Clause).
+[OpenStreetMap contributors](https://www.openstreetmap.org/copyright) (ODbL). Satellite imagery © Esri, Maxar,
+Earthstar Geographics; terrain © [OpenTopoMap](https://opentopomap.org) (CC-BY-SA); light map ©
+[CARTO](https://carto.com/attributions). [Leaflet](https://leafletjs.com) (BSD-2-Clause).

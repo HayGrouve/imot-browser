@@ -63,6 +63,11 @@ export const STRINGS = {
     priceUp: 'Price increased on imot.bg',
     priceOnRequest: 'On request',
 
+    mapType: 'Map type',
+    layerMap: 'Map',
+    layerSatellite: 'Satellite',
+    layerTerrain: 'Terrain',
+    layerLight: 'Light',
     groupBy: 'Group by',
     groupSettlement: 'City / village',
     groupNeighborhood: 'Neighbourhood',
@@ -205,7 +210,7 @@ export const STRINGS = {
 <ul>
 <li>Requests are spaced out (about 3 per second at most) and repeat imports reuse listing pages fetched in the last 3 days. Heavy use can still trigger imot.bg’s bot protection; the import then stops and keeps what it has. Use the data for personal research only — the listings belong to imot.bg and the advertisers.</li>
 </ul>
-<p class="muted">Place coordinates: GeoNames (CC BY 4.0) and © OpenStreetMap contributors (ODbL). Map tiles © OpenStreetMap contributors.</p>`,
+<p class="muted">Place coordinates: GeoNames (CC BY 4.0) and © OpenStreetMap contributors (ODbL). Map tiles: OpenStreetMap; satellite imagery © Esri, Maxar, Earthstar Geographics; terrain © OpenTopoMap (CC-BY-SA); light map © CARTO.</p>`,
   },
 
   bg: {
@@ -269,6 +274,11 @@ export const STRINGS = {
     priceUp: 'Увеличена цена в imot.bg',
     priceOnRequest: 'При запитване',
 
+    mapType: 'Вид карта',
+    layerMap: 'Карта',
+    layerSatellite: 'Сателит',
+    layerTerrain: 'Релеф',
+    layerLight: 'Светла',
     groupBy: 'Групиране',
     groupSettlement: 'Град / село',
     groupNeighborhood: 'Квартал',
@@ -411,7 +421,7 @@ export const STRINGS = {
 <ul>
 <li>Заявките са разредени (най-много около 3 в секунда), а повторните импорти използват страниците на обяви, заредени през последните 3 дни. При интензивно ползване защитата на imot.bg може да се задейства; импортът тогава спира и пази събраното. Ползвайте данните само за лични проучвания — обявите принадлежат на imot.bg и рекламодателите.</li>
 </ul>
-<p class="muted">Координати на местата: GeoNames (CC BY 4.0) и © сътрудници на OpenStreetMap (ODbL). Карта © сътрудници на OpenStreetMap.</p>`,
+<p class="muted">Координати на местата: GeoNames (CC BY 4.0) и © сътрудници на OpenStreetMap (ODbL). Карти: OpenStreetMap; сателитни снимки © Esri, Maxar, Earthstar Geographics; релеф © OpenTopoMap (CC-BY-SA); светла карта © CARTO.</p>`,
   },
 };
 
