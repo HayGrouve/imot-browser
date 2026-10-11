@@ -61,7 +61,7 @@ const fmtDate = (iso, withTime = false) => {
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric', ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}) });
 };
-const thumbOf = (url) => (url ? url.replace('/big1/', '/') : null);
+const thumbOf = (url) => (url ? url.replace(/\/big1?\//, '/') : null);
 
 const KIND_PREFIX_BG = { city: 'гр.', town: 'гр.', village: 'с.', resort: 'к.к.', locality: 'м-т', villaZone: 'в.з.' };
 const KIND_EN = { city: 'city', town: 'town', village: 'village', resort: 'resort', locality: 'locality', villaZone: 'villa zone' };
@@ -358,7 +358,8 @@ function rowHtml(l) {
   const thumb = safeUrl(l.thumb) || safeUrl(thumbOf(l.photos?.[0]));
   const url = safeUrl(l.url);
   const lang = getLang();
-  const sub = [l.nbhd?.name || l.neighborhood ? hoodName(l.nbhd?.name || l.neighborhood) : null,
+  const viaHood = l.place?.via === 'neighborhood';
+  const sub = [!viaHood && (l.nbhd?.name || l.neighborhood) ? hoodName(l.nbhd?.name || l.neighborhood) : null,
     l.place?.municipality && l.place.name !== l.settlement ? placeName(l.settlement, l.settlementKind) : null,
     !l.neighborhood && l.place?.kind && lang === 'en' ? KIND_EN[l.place.kind] : null,
     oblastLabel(l.oblast)].filter(Boolean).join(' · ');
@@ -481,7 +482,14 @@ function ppmBreaks(groups) {
   const v = groups.map((g) => g.medPpm).filter((x) => x != null).sort((a, b) => a - b);
   if (!v.length) return [];
   const q = (p) => v[Math.min(v.length - 1, Math.floor(p * v.length))];
-  return [q(0.2), q(0.4), q(0.6), q(0.8)].map((x) => Math.round(x / 10) * 10);
+  // With few places, quintiles coincide; drop duplicates so no band is empty ("2,420–2,420").
+  return [...new Set([q(0.2), q(0.4), q(0.6), q(0.8)].map((x) => Math.round(x / 10) * 10))].filter((x) => x > v[0]);
+}
+
+/** Ramp colour for bin i of (breaks.length + 1) bins, spread over the full light→dark ramp. */
+function rampColor(i, breaks) {
+  const bins = breaks.length + 1;
+  return MARKER_RAMP[bins === 1 ? 2 : Math.round((i * (MARKER_RAMP.length - 1)) / (bins - 1))];
 }
 
 function binOf(value, breaks) {
@@ -538,7 +546,7 @@ function renderMap() {
     const selected = ui.filters.place === g.key;
     const icon = L.divIcon({
       className: 'mk-wrap',
-      html: `<div class="mk ${bin < 0 ? 'mk-nodata' : `mk-b${bin}`} ${selected ? 'mk-selected' : ''}" style="width:${size}px;height:${size}px;${bin >= 0 ? `--mk:${MARKER_RAMP[bin]}` : ''}">${n}</div>`,
+      html: `<div class="mk ${bin < 0 ? 'mk-nodata' : `mk-b${MARKER_RAMP.indexOf(rampColor(bin, breaks))}`} ${selected ? 'mk-selected' : ''}" style="width:${size}px;height:${size}px;${bin >= 0 ? `--mk:${rampColor(bin, breaks)}` : ''}">${n}</div>`,
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
       popupAnchor: [0, -size / 2],
@@ -584,7 +592,7 @@ function renderLegend(breaks, hasNoData) {
     labels.push(lo == null ? `< ${fmtNum(hi)}` : hi == null ? `≥ ${fmtNum(lo)}` : `${fmtNum(lo)}–${fmtNum(hi)}`);
   }
   el.innerHTML = `<div class="lg-title">${esc(t('legendTitle'))}</div>
-${labels.map((lab, i) => `<div class="lg-row"><span class="lg-sw" style="background:${MARKER_RAMP[i]}"></span>${esc(lab)} €</div>`).join('')}
+${labels.map((lab, i) => `<div class="lg-row"><span class="lg-sw" style="background:${rampColor(i, breaks)}"></span>${esc(lab)} €</div>`).join('')}
 ${hasNoData ? `<div class="lg-row"><span class="lg-sw nodata"></span>${esc(t('legendNoData'))}</div>` : ''}
 <div class="lg-note">${esc(t('legendSize'))}</div>`;
 }
@@ -634,8 +642,9 @@ function renderDetail() {
   const url = safeUrl(l.url);
   const status = l.status ? CONSTRUCTION_STATUS[l.status]?.[lang] : null;
   const construction = [l.material ? term(l.material, lang) : null, status, l.yearText ? `${l.yearText} ${lang === 'bg' ? 'г.' : ''}`.trim() : null].filter(Boolean).join(', ');
-  const hood = l.nbhd?.name || l.neighborhood;
-  const location = [hood ? hoodName(hood) : null, listingPlace(l), oblastLabel(l.oblast)].filter(Boolean).join(', ');
+  const hood = l.place?.via === 'neighborhood' ? null : l.nbhd?.name || l.neighborhood;
+  const location = [hood ? hoodName(hood) : null, listingPlace(l),
+    l.place?.via === 'neighborhood' ? placeName(l.settlement, l.settlementKind) : null, oblastLabel(l.oblast)].filter(Boolean).join(', ');
   const price = l.price != null ? fmtMoney(l.price, l.currency || 'EUR') : (l.priceOnRequest ? t('priceOnRequest') : '—');
 
   $('#detailHead').innerHTML = `

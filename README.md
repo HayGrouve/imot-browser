@@ -93,7 +93,8 @@ imot.bg has no public API, so the importer reads the same HTML pages a browser s
     limited to 1 request/second.
 
   When a town listing names a village in its sub-location line (e.g. гр. Етрополе + “с.Лопян”), the village
-  is used. Named rural areas (*местности*) and some hamlets cannot be located; they are listed as “not on map”.
+  is used. The same goes for villages inside a city's municipality (“град София, с. Бистрица”), which get
+  their own marker instead of being treated as a city neighbourhood. Named rural areas (*местности*) and some hamlets cannot be located; they are listed as “not on map”.
 - Without the detail pages (`--no-details`), data comes from the search cards only: a truncated description,
   4 photos, and features guessed from the summary line.
 - Descriptions stay in the original Bulgarian. Only labels, property types and common terms are translated.

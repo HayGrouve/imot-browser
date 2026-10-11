@@ -147,9 +147,36 @@ test('mergeDetail keeps the structured card location', () => {
 test('misc helpers', () => {
   assert.equal(parseBgDate('Публикувана в 9:05 на 1 септември, 2026 год.'), '2026-09-01T09:05');
   assert.equal(bigPhotoUrl('https://imotstatic3.focus.bg/imot/photosimotbg/1/419/1j1_uW.jpg'), 'https://imotstatic3.focus.bg/imot/photosimotbg/1/419/big1/1j1_uW.jpg');
+  assert.equal(bigPhotoUrl('https://imotstatic3.focus.bg/imot/photosimotbg/1/419//big1/1j1_uW.jpg'), 'https://imotstatic3.focus.bg/imot/photosimotbg/1/419/big1/1j1_uW.jpg');
+  // Older ads: ".pic" files, large size under /big/ (big1 is 404 for these).
+  assert.equal(bigPhotoUrl('https://imotstatic2.focus.bg/imot/photosimotbg/1/902//big/1j143101552165902_4.pic'), 'https://imotstatic2.focus.bg/imot/photosimotbg/1/902/big/1j143101552165902_4.pic');
+  assert.equal(bigPhotoUrl('https://imotstatic2.focus.bg/imot/photosimotbg/1/902/1j143101552165902_4.pic'), 'https://imotstatic2.focus.bg/imot/photosimotbg/1/902/big/1j143101552165902_4.pic');
   assert.equal(transliterate('София'), 'Sofia');
   assert.equal(transliterate('Гълъбовци'), 'Galabovtsi');
   assert.equal(transliterate('Щъркелово'), 'Shtarkelovo');
   assert.equal(searchKey('Бов'), searchKey('bov'));
   assert.deepEqual(classifyTitle('Дава под Наем 2-СТАЕН'), { deal: 'rent', type: 'apt2', typeBg: '2-СТАЕН' });
+});
+
+test('photos on the cdn3.focus.bg host are picked up too', () => {
+  const card = `<div class="item VIP " id="ida1b178092205889992"><div class="photo"><div class="big"><a href="//www.imot.bg/obiava-1b178092205889992-x" class="image saveSlink"><img src="//cdn3.focus.bg/imot/photosimotbg/1/992/1b178092205889992_3s.jpg" class="pic"></a></div></div>
+<div class="text"><div class="zaglavie"><a href="//www.imot.bg/obiava-1b178092205889992-x" class="title saveSlink">Продава 2-СТАЕН<location>град София, с. Бистрица</location></a><div class="price "><div>99 000 €</div></div><div class="like"></div></div><div class="info">60 кв.м</div></div></div>`;
+  const [item] = parseSearchPage(card).items;
+  assert.equal(item.thumb, 'https://cdn3.focus.bg/imot/photosimotbg/1/992/1b178092205889992_3s.jpg');
+  assert.equal(item.photos[0], 'https://cdn3.focus.bg/imot/photosimotbg/1/992/big1/1b178092205889992_3s.jpg');
+  const detail = parseDetailPage(`<div class="obTitle"><h1>Продава 2-СТАЕН <div>град София, с. Бистрица</div><span>Обява: 1b178092205889992</span></h1></div>
+<img src="//cdn3.focus.bg/imot/photosimotbg/1/992//big/1b178092205889992_3s.jpg"><img src="//cdn3.focus.bg/imot/photosimotbg/1/992/1b178092205889992_iY.jpg">`);
+  assert.deepEqual(detail.photos, [
+    'https://cdn3.focus.bg/imot/photosimotbg/1/992/big1/1b178092205889992_3s.jpg',
+    'https://cdn3.focus.bg/imot/photosimotbg/1/992/big1/1b178092205889992_iY.jpg',
+  ]);
+});
+
+test('detail photos: .pic files and a photo prefix that differs from the listing ID', () => {
+  const page = (id, imgs) => `<div class="obTitle"><h1>Продава КЪЩА <div>област София, с. Свидня</div><span>Обява: ${id}</span></h1></div>${imgs}`;
+  const pic = parseDetailPage(page('1j143101552165902',
+    '<img src="//imotstatic2.focus.bg/imot/photosimotbg/1/902//big/1j143101552165902_4.pic"><img src="//cdn3.focus.bg/imot/photosimotbg/1/023/1j178421042948023_JU.jpg">'));
+  assert.deepEqual(pic.photos, ['https://imotstatic2.focus.bg/imot/photosimotbg/1/902/big/1j143101552165902_4.pic']);
+  const prefix = parseDetailPage(page('1j178264425726187', '<img src="//cdn3.focus.bg/imot/photosimotbg/1/187/1k178264425726187_1n.jpg">'));
+  assert.deepEqual(prefix.photos, ['https://cdn3.focus.bg/imot/photosimotbg/1/187/big1/1k178264425726187_1n.jpg']);
 });
