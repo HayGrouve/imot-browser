@@ -1,0 +1,15 @@
+{
+  "name": "imot-browser",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local browser for imot.bg real-estate listings: import search links, browse a sortable table and a map grouped by city/village (EN/BG).",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.mjs",
+    "import": "node cli.mjs import",
+    "export": "node cli.mjs export",
+    "test": "node --test \"test/*.test.mjs\"",
+    "gazetteer": "node scripts/build-gazetteer.mjs"
+  }
+}
