@@ -24,8 +24,10 @@ import {
   lookupHood,
   lookupKey,
   mergeDetail,
+  onlineLookups,
   splitRange,
 } from '../shared/importer'
+import type { PlaceTarget } from '../shared/importer'
 import {
   MAX_PAGES,
   PAGE_SIZE,
@@ -546,14 +548,8 @@ export const runDetails = internalAction({
 
 // ---------------------------------------------------------------- step 3: places online
 
-interface Target {
+interface Target extends PlaceTarget {
   id: Id<'listings'>
-  settlement: string | null
-  settlementKind: string | null
-  oblast: string | null
-  neighborhood: string | null
-  place: Place | null
-  hasNbhd: boolean
 }
 
 export const runGeocode = internalAction({
@@ -590,25 +586,9 @@ export const runGeocode = internalAction({
             cursor,
           })
         for (const t of page.rows) {
-          if (!t.settlement) continue
-          if (!t.place || t.place.match === 'ambiguous')
-            add(
-              settlements,
-              lookupKey(
-                t.oblast,
-                t.place?.name || t.settlement,
-                t.place?.kind || t.settlementKind,
-              ),
-              t,
-            )
-          if (
-            t.settlementKind === 'city' &&
-            t.neighborhood &&
-            !t.hasNbhd &&
-            t.place &&
-            t.place.via !== 'neighborhood'
-          )
-            add(hoods, `${t.settlement}|${t.neighborhood}`, t)
+          const want = onlineLookups(t)
+          if (want.settlement) add(settlements, want.settlement, t)
+          if (want.hood) add(hoods, want.hood, t)
         }
         if (page.done) break
         cursor = page.cursor

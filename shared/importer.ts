@@ -201,6 +201,53 @@ function hoodOffline(
   return { name, lat: r.lat, lon: r.lon, source: 'geonames', v: NBHD_VERSION }
 }
 
+/** A big-city neighbourhood the listing is placed by, not a village of the city's municipality
+ *  that it is placed as. */
+function isCityHood(
+  neighborhood: string | null | undefined,
+  kind: string | null,
+  place: Place | null,
+): boolean {
+  return !!neighborhood && kind === 'city' && place?.via !== 'neighborhood'
+}
+
+/** A listing as the places step finds it: where the gazetteer put it, and whether its nbhd has a point. */
+export interface PlaceTarget {
+  settlement: string | null
+  settlementKind: string | null
+  oblast: string | null
+  neighborhood: string | null
+  place: Place | null
+  hasNbhd: boolean
+}
+
+/**
+ * What the places step looks up online for a listing, by key (listings that share one share the
+ * answer): its settlement when the gazetteer found none or several, and its big-city
+ * neighbourhood when that has no point yet and the city was placed.
+ */
+export function onlineLookups(t: PlaceTarget): {
+  settlement: string | null
+  hood: string | null
+} {
+  if (!t.settlement) return { settlement: null, hood: null }
+  const settlement =
+    !t.place || t.place.match === 'ambiguous'
+      ? lookupKey(
+          t.oblast,
+          t.place?.name || t.settlement,
+          t.place?.kind || t.settlementKind,
+        )
+      : null
+  const hood =
+    t.place &&
+    !t.hasNbhd &&
+    isCityHood(t.neighborhood, t.settlementKind, t.place)
+      ? `${t.settlement}|${t.neighborhood}`
+      : null
+  return { settlement, hood }
+}
+
 /** Settlement-level coordinates from the offline gazetteer. */
 export function locateOffline(
   g: Gazetteer,
@@ -247,8 +294,7 @@ export function locateOffline(
     }
   }
   if (!place && town) place = makePlace(town, f.settlement, kind, oblast)
-  const cityHood =
-    !!f.neighborhood && kind === 'city' && place?.via !== 'neighborhood'
+  const cityHood = isCityHood(f.neighborhood, kind, place)
   return {
     place,
     lookup: lookupKey(oblast, place?.name || f.settlement, place?.kind || kind),

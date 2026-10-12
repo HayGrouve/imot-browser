@@ -36,40 +36,36 @@ import type { Lang, Params, StringKey } from '#/lib/i18n'
 import { makeFormat } from '#/lib/format'
 import { loadJson, saveJson } from '#/lib/storage'
 import { resolveWorkspace } from '#/lib/workspace'
-import type { SharedView } from '#/lib/share'
 import { useWorkspaceData } from '#/lib/use-data'
+import { prepare, rememberAreaSearch } from '#/lib/listings'
+import type { DrawnArea, Filters, GroupMode } from '#/lib/listings'
 import {
-  DEFAULT_FILTERS,
-  applyFilters,
-  areaSearchOf,
-  poolOf,
-  prepare,
-  rememberAreaSearch,
-  shownOf,
-  sortListings,
-  validAreaSearches,
-  validDrawnArea,
-  validShown,
-  validSort,
-} from '#/lib/listings'
-import type { DrawnArea, Filters, GroupMode, Sort } from '#/lib/listings'
+  clearFilters,
+  initialAreaSearches,
+  initialMarks,
+  initialView,
+  newSearch as toNewSearch,
+  screenOf,
+  setFilters as withFilters,
+  sharedViewOf,
+  showPicked,
+  showSearch as toShownSearch,
+  shownJob,
+  visibleListings,
+} from '#/lib/view'
+import type { Opened, View } from '#/lib/view'
 import { DEFAULT_OPTIONS } from '../../shared/importer'
 import type { ImportOptions } from '../../shared/importer'
 
-interface Prefs {
+/** The view (src/lib/view.ts) and the map's and language's settings, saved together. */
+interface Prefs extends View {
   lang: Lang
-  sort: Sort
   groupMode: GroupMode
   baseLayer: string
-  filters: Filters
-  /** The shown search: the links whose listings show, null for every search's. */
-  shown: Array<string> | null
 }
 
-/** `switched`: a link opened another workspace, which starts with all of its searches shown
- *  and no filters, unless the link carries the `view` it was shared with. */
-function initialPrefs(switched: boolean, view: SharedView | null): Prefs {
-  const saved = loadJson<Partial<Prefs>>('ui', {})
+function initialPrefs(opened: Opened): Prefs {
+  const saved = loadJson<Partial<Record<keyof Prefs, unknown>>>('ui', {})
   const lang: Lang =
     saved.lang === 'bg' || saved.lang === 'en'
       ? saved.lang
@@ -77,25 +73,14 @@ function initialPrefs(switched: boolean, view: SharedView | null): Prefs {
         ? 'bg'
         : 'en'
   return {
+    ...initialView(saved, opened),
     lang,
-    sort: view?.sort ?? validSort(saved.sort),
     groupMode:
       saved.groupMode === 'neighborhood' ? 'neighborhood' : 'settlement',
     baseLayer:
-      saved.baseLayer && saved.baseLayer in BASE_LAYERS
+      typeof saved.baseLayer === 'string' && saved.baseLayer in BASE_LAYERS
         ? saved.baseLayer
         : 'light',
-    // Another workspace's filters (a drawn area, a price) would hide this one's listings.
-    filters:
-      view?.filters ??
-      (switched
-        ? DEFAULT_FILTERS
-        : {
-            ...DEFAULT_FILTERS,
-            ...saved.filters,
-            drawnArea: validDrawnArea(saved.filters?.drawnArea),
-          }),
-    shown: view ? view.shown : switched ? null : validShown(saved.shown),
   }
 }
 
@@ -128,31 +113,20 @@ function usePersisted<T>(
   return [value, setValue] as const
 }
 
-const NO_STARS: ReadonlySet<string> = new Set()
+const NONE: Array<never> = []
 
 export function App() {
   const [ws] = useState(resolveWorkspace)
   const workspace = ws.key
-  const [prefs, setPrefs] = usePersisted('ui', () =>
-    initialPrefs(ws.switched, ws.view),
-  )
-  // A shared view brings its stars and hidden listings along.
+  const [prefs, setPrefs] = usePersisted('ui', () => initialPrefs(ws))
   const [stars, setStars] = usePersisted(
     'stars',
-    () =>
-      new Set([
-        ...loadJson<Array<string>>('stars', []),
-        ...(ws.view?.stars ?? []),
-      ]),
+    () => initialMarks(loadJson('stars', []), ws.view?.stars),
     (s) => [...s],
   )
   const [hidden, setHidden] = usePersisted(
     'hidden',
-    () =>
-      new Set([
-        ...loadJson<Array<string>>('hidden', []),
-        ...(ws.view?.hidden ?? []),
-      ]),
+    () => initialMarks(loadJson('hidden', []), ws.view?.hidden),
     (s) => [...s],
   )
   const [notes, setNotes] = usePersisted('notes', () =>
@@ -166,10 +140,9 @@ export function App() {
     }),
   )
   // The area searches started here, so showing one again shows all its links and its area.
-  const [areaSearches, setAreaSearches] = usePersisted('areaSearches', () => {
-    const list = validAreaSearches(loadJson('areaSearches', []))
-    return ws.view?.area ? rememberAreaSearch(list, ws.view.area) : list
-  })
+  const [areaSearches, setAreaSearches] = usePersisted('areaSearches', () =>
+    initialAreaSearches(loadJson('areaSearches', []), ws),
+  )
   // The import a search just started, until `job` is that one: its listings are on their way.
   const [startedJob, setStartedJob] = useState<string | null>(null)
   const [view, setView] = useState<'list' | 'map'>('list')
@@ -209,60 +182,32 @@ export function App() {
     () => (raw ? raw.map((l) => prepare(l, sourceMap)) : null),
     [raw, sourceMap],
   )
-  // The shown search comes first: the filters, counts and map work on its listings.
   const shown = prefs.shown
-  const scoped = useMemo(
-    () => (all ? shownOf(all, sources, shown) : null),
-    [all, sources, shown],
-  )
   const onlyHidden = prefs.filters.hidden
-  const pool = useMemo(
-    () => (scoped ? poolOf(scoped, hidden, onlyHidden) : null),
-    [scoped, hidden, onlyHidden],
-  )
-  const starsForFilter = prefs.filters.starred ? stars : NO_STARS
-  const filtered = useMemo(
+  const visible = useMemo(
     () =>
-      pool
-        ? sortListings(
-            applyFilters(pool, prefs.filters, starsForFilter),
-            prefs.sort,
+      all
+        ? visibleListings(
+            all,
+            sources,
+            { shown, filters: prefs.filters, sort: prefs.sort },
+            { stars, hidden },
             lang,
           )
-        : [],
-    [pool, prefs.filters, starsForFilter, prefs.sort, lang],
+        : null,
+    [all, sources, shown, prefs.filters, prefs.sort, stars, hidden, lang],
   )
-  const multiDeal = useMemo(
-    () => new Set((scoped ?? []).map((l) => l.deal)).size > 1,
-    [scoped],
-  )
-  const hasHoods = useMemo(
-    () => (scoped ?? []).some((l) => l.nbhd?.lat != null),
-    [scoped],
-  )
-  const starCount = useMemo(
-    () => (pool ?? []).reduce((n, l) => n + (stars.has(l.id) ? 1 : 0), 0),
-    [pool, stars],
-  )
-  const hiddenCount = useMemo(
-    () => (scoped ?? []).reduce((n, l) => n + (hidden.has(l.id) ? 1 : 0), 0),
-    [scoped, hidden],
-  )
-  // What "Show earlier searches" brings back.
-  const earlier = useMemo(
-    () => (all ?? []).reduce((n, l) => n + (hidden.has(l.id) ? 0 : 1), 0),
-    [all, hidden],
-  )
-  // Nothing in the shown search: an area drawn now is drawn to be searched.
-  const clean = scoped?.length === 0
-  const hasToolbar = !!scoped && !clean
+  const scoped = visible?.scoped ?? null
+  const pool = visible?.pool ?? null
+  const filtered = visible?.filtered ?? NONE
+  const clean = !!visible?.clean
+  const hasToolbar = !!visible && !clean
   // The shown search's import, while nothing of it has arrived.
-  const scopeJob =
-    shown?.length && job?.inputs.some((i) => shown.includes(i.input))
-      ? job
-      : null
-  const searching =
-    !!shown?.length && clean && (startedJob != null || jobRunning(scopeJob))
+  const scopeJob = shownJob(shown, job)
+  const empty = screenOf(visible, shown, {
+    error: !!error,
+    importing: startedJob != null || jobRunning(scopeJob),
+  })
 
   useEffect(() => {
     if (job && job.id === startedJob) setStartedJob(null)
@@ -356,38 +301,31 @@ export function App() {
     ],
   )
 
-  const setFilters = useCallback(
-    (patch: Partial<Filters>) => {
-      setPrefs((p) => ({ ...p, filters: { ...p.filters, ...patch } }))
+  /** A change to the view (src/lib/view.ts): the list starts again from its top. */
+  const changeView = useCallback(
+    (change: (v: Prefs) => View) => {
+      setPrefs((p) => ({ ...p, ...change(p) }))
       setLimit(PAGE)
       scroll.current?.scrollTo({ top: 0 })
     },
     [setPrefs],
+  )
+  const setFilters = useCallback(
+    (patch: Partial<Filters>) => changeView((v) => withFilters(v, patch)),
+    [changeView],
   )
   const onQuery = useCallback((q: string) => setFilters({ q }), [setFilters])
-
-  /** Show these searches' listings (null: every search's), in the area they were drawn as. */
-  const showSearch = useCallback(
-    (urls: Array<string> | null, drawnArea: DrawnArea | null = null) => {
-      setPrefs((p) => ({
-        ...p,
-        shown: urls,
-        filters: { ...p.filters, drawnArea },
-      }))
-      setLimit(PAGE)
-      scroll.current?.scrollTo({ top: 0 })
-    },
-    [setPrefs],
-  )
+  const showSearch = (
+    urls: Array<string> | null,
+    drawnArea: DrawnArea | null = null,
+  ) => changeView((v) => toShownSearch(v, urls, drawnArea))
   const drawToSearch = () => {
     if (narrow) setView('map')
     mapRef.current?.startDrawing()
   }
   // A clean map, the filters as they start (the sort stays), and the pen down.
   const newSearch = () => {
-    setPrefs((p) => ({ ...p, shown: [], filters: DEFAULT_FILTERS }))
-    setLimit(PAGE)
-    scroll.current?.scrollTo({ top: 0 })
+    changeView(toNewSearch)
     drawToSearch()
   }
   const onMore = useCallback(
@@ -418,48 +356,18 @@ export function App() {
     if (!narrow) panes.current?.setLayout(paneLayout())
   }, [narrow])
 
-  // What the share link opens on another device: this view, and the marks
-  // (among the shown search's listings) that change what it shows.
-  const shareView = useMemo<SharedView | null>(() => {
-    if (dialog !== 'share') return null
-    const ids = (scoped ?? []).map((l) => l.id)
-    return {
-      shown,
-      filters: prefs.filters,
-      sort: prefs.sort,
-      hidden: ids.filter((id) => hidden.has(id)),
-      stars: ids.filter((id) => stars.has(id)),
-      area: (shown?.length && areaSearchOf(areaSearches, shown[0])) || null,
-    }
-  }, [
-    dialog,
-    scoped,
-    shown,
-    prefs.filters,
-    prefs.sort,
-    hidden,
-    stars,
-    areaSearches,
-  ])
+  const shareView = useMemo(
+    () =>
+      dialog === 'share'
+        ? sharedViewOf(prefs, visible, { stars, hidden }, areaSearches)
+        : null,
+    [dialog, prefs, visible, stars, hidden, areaSearches],
+  )
 
   const detailIndex = detailId
     ? filtered.findIndex((l) => l.id === detailId)
     : -1
   const detail = detailId ? (all?.find((l) => l.id === detailId) ?? null) : null
-
-  const empty = !all
-    ? error
-      ? 'error'
-      : null
-    : searching
-      ? 'searching'
-      : clean
-        ? shown?.length
-          ? 'nothing'
-          : 'start'
-        : filtered.length === 0
-          ? 'filtered'
-          : null
 
   return (
     <AppContext.Provider value={ctx}>
@@ -518,7 +426,7 @@ export function App() {
                 >
                   {t('skipToMap')}
                 </a>
-                {hasToolbar && (
+                {visible && hasToolbar && (
                   <div
                     ref={toolbar}
                     className={cn(
@@ -527,12 +435,12 @@ export function App() {
                     )}
                   >
                     <FilterBar
-                      all={scoped}
-                      pool={pool ?? scoped}
+                      all={visible.scoped}
+                      pool={visible.pool}
                       filters={prefs.filters}
                       onChange={setFilters}
-                      starCount={starCount}
-                      hiddenCount={hiddenCount}
+                      starCount={visible.starCount}
+                      hiddenCount={visible.hiddenCount}
                     />
                   </div>
                 )}
@@ -562,7 +470,7 @@ export function App() {
                       total={filtered.length}
                       limit={limit}
                       onMore={onMore}
-                      multiDeal={multiDeal}
+                      multiDeal={!!visible?.multiDeal}
                       onOpen={setDetailId}
                       onHover={onHover}
                       scrollRoot={scroll}
@@ -576,7 +484,7 @@ export function App() {
                   {(empty === 'start' || empty === 'nothing') && (
                     <StartState
                       nothing={empty === 'nothing'}
-                      earlier={earlier}
+                      earlier={visible?.earlier ?? 0}
                       onDraw={drawToSearch}
                       onSearchPlace={() => setDialog('searchPlace')}
                       onShowAll={() => showSearch(null)}
@@ -586,7 +494,7 @@ export function App() {
                     <EmptyState
                       kind={empty}
                       message={error ?? undefined}
-                      onClear={() => setFilters({ ...DEFAULT_FILTERS, q: '' })}
+                      onClear={() => changeView((v) => clearFilters(v))}
                     />
                   )}
                 </div>
@@ -627,7 +535,7 @@ export function App() {
                 <ListingMap
                   ref={mapRef}
                   filtered={filtered}
-                  hasHoods={hasHoods}
+                  hasHoods={!!visible?.hasHoods}
                   groupMode={prefs.groupMode}
                   baseLayer={prefs.baseLayer}
                   selectedPlace={prefs.filters.place}
@@ -714,9 +622,7 @@ export function App() {
         shown={shown}
         areaSearches={areaSearches}
         onShow={(url) => {
-          const group = areaSearchOf(areaSearches, url)
-          if (url == null) showSearch(null)
-          else showSearch(group?.urls ?? [url], group?.area)
+          changeView((v) => showPicked(v, url, areaSearches))
           setDialog(null)
           setView('list')
         }}

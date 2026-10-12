@@ -7,6 +7,7 @@ import {
   NBHD_VERSION,
   locateOffline,
   lookupHood,
+  onlineLookups,
   settleLocation,
 } from './importer'
 import { parseLocation } from './parse'
@@ -214,4 +215,39 @@ test("another town's quarter or village of that name is not the city's", async (
   expect(
     await lookupHood(g, asked, 'Свобода', 'Бургас', 'Бургас', burgas),
   ).toBeNull()
+})
+
+test('the places step looks up online what the gazetteer left unsure', () => {
+  const target = (loc: string) => {
+    const f = { id: 'x', ...parseLocation(loc) }
+    const { place, nbhd } = settleLocation(
+      locateOffline(g, f),
+      f.neighborhood,
+      null,
+    )
+    return {
+      settlement: f.settlement ?? null,
+      settlementKind: f.settlementKind ?? null,
+      oblast: f.oblast ?? null,
+      neighborhood: f.neighborhood ?? null,
+      place,
+      hasNbhd: !!nbhd?.lat,
+    }
+  }
+  // A city's neighbourhood the gazetteer has no point for.
+  expect(onlineLookups(target('град София, Лозенец'))).toEqual({
+    settlement: null,
+    hood: 'София|Лозенец',
+  })
+  // One it has: nothing to ask.
+  expect(onlineLookups(target('град София, Симеоново'))).toEqual({
+    settlement: null,
+    hood: null,
+  })
+  // A village of the city's municipality is a place, not a neighbourhood.
+  expect(onlineLookups(target('град София, с. Бистрица')).hood).toBeNull()
+  // A name the gazetteer can't tell apart: the settlement, by its lookup key.
+  expect(onlineLookups(target('област София, с. Костенец')).settlement).toMatch(
+    /^София\|Костенец\|/,
+  )
 })

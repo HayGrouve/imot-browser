@@ -37,6 +37,23 @@ export function insidePolygon(lat: number, lon: number, poly: DrawnArea) {
   return inside
 }
 
+/** A saved or shared drawn area, or null when it isn't one (at least three [lat, lon] corners).
+ *  Looser than `validArea`: it only has to filter listings, not be searched. */
+export function validDrawnArea(v: unknown): DrawnArea | null {
+  if (!Array.isArray(v) || v.length < 3) return null
+  const ok = v.every(
+    (p) =>
+      Array.isArray(p) &&
+      p.length === 2 &&
+      p.every((x) => typeof x === 'number' && Number.isFinite(x)),
+  )
+  return ok ? (v as DrawnArea) : null
+}
+
+/** About a metre: Leaflet's 15 decimals would make links and saved areas long for nothing. */
+export const roundArea = (area: DrawnArea): DrawnArea =>
+  area.map(([lat, lon]) => [+lat.toFixed(5), +lon.toFixed(5)])
+
 /** An area sent to be searched, or null: 3 to 500 corners, none far outside Bulgaria. */
 export function validArea(v: unknown): DrawnArea | null {
   if (!Array.isArray(v) || v.length < 3 || v.length > MAX_CORNERS) return null
@@ -69,6 +86,12 @@ export interface AreaPlan {
   places: Array<AreaPlace>
   /** One imot.bg search each. */
   searches: Array<{ location: string; districts: Array<string> }>
+}
+
+/** Why a plan can't be searched (the server's error code), or null when it can. */
+export function planProblem(plan: AreaPlan): 'areaEmpty' | 'areaTooBig' | null {
+  if (!plan.searches.length) return 'areaEmpty'
+  return plan.searches.length > MAX_AREA_SEARCHES ? 'areaTooBig' : null
 }
 
 /**

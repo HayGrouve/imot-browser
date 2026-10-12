@@ -8,7 +8,7 @@ import { PROPERTY_TYPES, typeLabel } from '../../shared/vocab'
 import type { Lang } from '../../shared/vocab'
 import type { Place } from '../../shared/types'
 import { listingPlace } from './labels'
-import { insidePolygon } from '../../shared/area'
+import { insidePolygon, validDrawnArea } from '../../shared/area'
 import type { DrawnArea } from '../../shared/area'
 
 export type { DrawnArea }
@@ -100,6 +100,24 @@ export const DEFAULT_FILTERS: Filters = {
   drawnArea: null,
 }
 
+const NUMBERS = ['priceMin', 'priceMax', 'areaMin', 'areaMax', 'yardMin']
+
+/** Saved or shared filters, each one that isn't of its kind left as it starts. */
+export function validFilters(v: unknown): Filters {
+  const f = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>
+  const out: Filters = { ...DEFAULT_FILTERS }
+  for (const k of Object.keys(DEFAULT_FILTERS) as Array<keyof Filters>) {
+    const value = f[k]
+    if (k === 'drawnArea') out.drawnArea = validDrawnArea(value)
+    else if (NUMBERS.includes(k)) {
+      if (typeof value === 'number' && Number.isFinite(value))
+        Object.assign(out, { [k]: value })
+    } else if (typeof value === typeof DEFAULT_FILTERS[k])
+      Object.assign(out, { [k]: value })
+  }
+  return out
+}
+
 export function typeValue(l: Pick<Listing, 'type' | 'typeBg'>): string {
   return l.type === 'other' || !l.type ? `other:${l.typeBg || ''}` : l.type
 }
@@ -138,18 +156,6 @@ export function groupOf(
     }
   }
   return { key: p.key, lat: p.lat, lon: p.lon, place: p }
-}
-
-/** A saved drawn area, or null when it isn't one (at least three [lat, lon] corners). */
-export function validDrawnArea(v: unknown): DrawnArea | null {
-  if (!Array.isArray(v) || v.length < 3) return null
-  const ok = v.every(
-    (p) =>
-      Array.isArray(p) &&
-      p.length === 2 &&
-      p.every((x) => typeof x === 'number' && Number.isFinite(x)),
-  )
-  return ok ? (v as DrawnArea) : null
 }
 
 /** Whether the listing's best-known point (its neighbourhood, else its settlement) is in the area. */

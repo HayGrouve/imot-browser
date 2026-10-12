@@ -32,6 +32,7 @@ import {
 } from '#/lib/labels'
 import { thumbFor } from '#/lib/urls'
 import { cn } from '#/lib/utils'
+import { roundArea } from '../../shared/area'
 import { transliterate } from '../../shared/text'
 import { typeLabel } from '../../shared/vocab'
 
@@ -537,12 +538,13 @@ export function ListingMap({
       stop()
       // A tap or a short stroke is not an area: keep drawing.
       if (corners.length < 3 || size.x + size.y < 40) return
-      const round = (x: number) => Math.round(x * 1e5) / 1e5
       callbacks.current.onDrawnArea(
-        corners.map((p) => {
-          const ll = map.containerPointToLatLng(p)
-          return [round(ll.lat), round(ll.lng)]
-        }),
+        roundArea(
+          corners.map((p) => {
+            const ll = map.containerPointToLatLng(p)
+            return [ll.lat, ll.lng]
+          }),
+        ),
       )
       setDrawing(false)
     }

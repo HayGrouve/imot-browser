@@ -32,6 +32,9 @@ The words this app uses, in code, copy and PRs.
   none, the clean map that **New search** starts from. A listing is in a search when one of its sources has that
   search's link. It comes before the filters, which don't change it, and earlier searches are hidden, not deleted.
   Saved in this browser.
+- **View**: what the list and the map show and in what order: the shown search, then the hidden listings (or
+  only them), then the filters, then the sort. Saved in this browser; a share link carries it with the stars and
+  hidden listings among the shown search's (`src/lib/view.ts`).
 - **Price band**: a `price_min`/`price_max` slice of a search, used to get past imot.bg's 1,000-result cap.
 - **New** (since the last import) and **no longer listed** (stale: missing from the latest import of every search it
   came from).
