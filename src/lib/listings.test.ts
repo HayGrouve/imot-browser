@@ -4,13 +4,15 @@ import {
   applyFilters,
   binOf,
   computeGroups,
+  insidePolygon,
   poolOf,
   ppmBreaks,
   prepare,
   rampColor,
   sortListings,
+  validDrawnArea,
 } from './listings'
-import type { Listing, RawListing, Source } from './listings'
+import type { DrawnArea, Listing, RawListing, Source } from './listings'
 import {
   invalidRange,
   moreCount,
@@ -157,6 +159,58 @@ describe('listings', () => {
       'gn:1',
       'nb:gn:1|Лозенец',
     ])
+  })
+
+  test('drawn area: listings at a neighbourhood inside it, or else a settlement inside it', () => {
+    // A box around Sofia's south (Lozenets), clear of the city's centre point.
+    const area: DrawnArea = [
+      [42.68, 23.3],
+      [42.68, 23.36],
+      [42.64, 23.36],
+      [42.64, 23.3],
+    ]
+    const hood = {
+      name: 'Лозенец',
+      lat: 42.67,
+      lon: 23.33,
+      source: 'nominatim',
+      v: 2,
+    }
+    const sofia = place('gn:2', 'София', 42.6975, 23.3242)
+    const all = [
+      prepare(raw('a', { place: sofia, nbhd: hood }), SOURCES),
+      prepare(raw('b', { place: sofia }), SOURCES),
+      prepare(
+        raw('c', { place: place('gn:3', 'Бистрица', 42.66, 23.34) }),
+        SOURCES,
+      ),
+      prepare(raw('d', { place: null }), SOURCES),
+    ]
+    const ids = applyFilters(
+      all,
+      { ...DEFAULT_FILTERS, drawnArea: area },
+      new Set(),
+    ).map((l) => l.id)
+    expect(ids).toEqual(['a', 'c'])
+    expect(insidePolygon(42.66, 23.37, area)).toBe(false)
+  })
+
+  test('drawn area: a saved one is kept only when it is a polygon', () => {
+    const tri = [
+      [42.7, 23.3],
+      [42.6, 23.4],
+      [42.6, 23.2],
+    ]
+    expect(validDrawnArea(tri)).toEqual(tri)
+    expect(validDrawnArea(tri.slice(0, 2))).toBeNull()
+    expect(
+      validDrawnArea([
+        [42.7, 23.3],
+        [42.6, 'x'],
+        [1, 2],
+      ]),
+    ).toBeNull()
+    expect(validDrawnArea('nope')).toBeNull()
   })
 
   test('colour bands: quintiles of the places, never an empty band', () => {

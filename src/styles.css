@@ -341,8 +341,14 @@
   max-height: 252px;
   overflow: auto;
 }
-.pop-list button {
-  width: 100%;
+.pop-list li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.pop-row {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -356,8 +362,31 @@
   color: inherit;
   border-radius: calc(var(--radius) * 0.6);
 }
-.pop-list button:hover {
+.pop-row:hover {
   background: var(--muted);
+}
+.pop-hide {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    transform 0.15s;
+}
+.pop-hide:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+.pop-hide:active {
+  transform: scale(0.9);
 }
 .pop-list b {
   white-space: nowrap;
@@ -400,6 +429,29 @@
 }
 .pop-show:hover {
   background: color-mix(in srgb, var(--primary) 86%, var(--background));
+}
+/* The drawn area, and drawing one: the markers let the stroke through. */
+.draw-area {
+  stroke: var(--foreground);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+  fill: var(--foreground);
+  fill-opacity: 0.07;
+}
+.draw-line {
+  stroke: var(--ring);
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+.leaflet-container.map-drawing {
+  cursor: crosshair;
+  touch-action: none;
+}
+.map-drawing .mk-wrap .mk,
+.map-drawing .leaflet-marker-icon {
+  pointer-events: none;
 }
 .pop-note {
   margin-top: 10px;

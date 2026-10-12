@@ -4,6 +4,7 @@ import type * as Leaflet from 'leaflet'
 import {
   CornersOutIcon,
   GpsSlashIcon,
+  PolygonIcon,
   StackIcon,
   XIcon,
 } from '@phosphor-icons/react'
@@ -19,9 +20,10 @@ import {
   ppmBreaks,
   rampColor,
 } from '#/lib/listings'
-import type { Group, GroupMode, Listing } from '#/lib/listings'
+import type { DrawnArea, Group, GroupMode, Listing } from '#/lib/listings'
 import { KIND_EN, hoodName, oblastLabel, placeName } from '#/lib/labels'
 import { thumbFor } from '#/lib/urls'
+import { cn } from '#/lib/utils'
 import { transliterate } from '../../shared/text'
 import { typeLabel } from '../../shared/vocab'
 
@@ -123,9 +125,23 @@ function groupSub(g: Group, { t, lang }: Pick<AppContextValue, 't' | 'lang'>) {
   return [kind, muni, oblastLabel(p.oblast, lang)].filter(Boolean).join(', ')
 }
 
+// Phosphor's EyeSlash and Eye (regular): the popup is plain HTML, not React.
+const ICON_PATHS = {
+  hide: 'M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z',
+  unhide:
+    'M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z',
+}
+const svgIcon = (d: string) =>
+  `<svg viewBox="0 0 256 256" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="${d}"/></svg>`
+
 function popupHtml(
   g: Group,
-  { t, fmt, lang }: Pick<AppContextValue, 't' | 'fmt' | 'lang'>,
+  {
+    t,
+    fmt,
+    lang,
+    hidden,
+  }: Pick<AppContextValue, 't' | 'fmt' | 'lang' | 'hidden'>,
 ) {
   const items = [...g.items].sort(
     (a, b) => (a.eur ?? Infinity) - (b.eur ?? Infinity),
@@ -149,7 +165,8 @@ function popupHtml(
           : l.priceOnRequest
             ? t('priceOnRequest')
             : ''
-      return `<li><button type="button" data-open="${esc(l.id)}">${img}<span class="pop-desc">${esc(typeLabel(l.type ?? 'other', l.typeBg, lang, true))}<br><span class="muted">${esc(size)}</span></span><b>${esc(price)}</b></button></li>`
+      const hide = hidden.has(l.id) ? 'unhide' : 'hide'
+      return `<li><button type="button" class="pop-row" data-open="${esc(l.id)}">${img}<span class="pop-desc">${esc(typeLabel(l.type ?? 'other', l.typeBg, lang, true))}<br><span class="muted">${esc(size)}</span></span><b>${esc(price)}</b></button><button type="button" class="pop-hide" data-hide="${esc(l.id)}" aria-pressed="${hide === 'unhide'}" title="${esc(t(hide))}" aria-label="${esc(t(hide))}">${svgIcon(ICON_PATHS[hide])}</button></li>`
     })
     .join('')
   const more =
@@ -189,13 +206,15 @@ export function ListingMap({
   ref,
   filtered,
   hasHoods,
-  groupMode,
+  groupMode: chosenMode,
   baseLayer,
   selectedPlace,
   unmappedActive,
+  drawnArea,
   onOpen,
   onFilterPlace,
   onToggleUnmapped,
+  onDrawnArea,
   onBaseLayer,
   onGroupMode,
 }: {
@@ -206,23 +225,32 @@ export function ListingMap({
   baseLayer: string
   selectedPlace: string
   unmappedActive: boolean
+  drawnArea: DrawnArea | null
   onOpen: (id: string) => void
   onFilterPlace: (key: string) => void
   onToggleUnmapped: () => void
+  onDrawnArea: (area: DrawnArea | null) => void
   onBaseLayer: (key: string) => void
   onGroupMode: (mode: GroupMode) => void
 }) {
   const app = useApp()
-  const { t, fmt, lang } = app
+  const { t, fmt, lang, hidden, toggleHidden } = app
   const box = useRef<HTMLDivElement>(null)
   const [state, setState] = useState<MapState | null>(null)
+  const [drawing, setDrawing] = useState(false)
   const markers = useRef(new Map<string, Leaflet.Marker>())
   const groups = useRef<Array<Group>>([])
   const fitted = useRef(false)
+  /** The group whose popup is open, so it stays open when its listings change. */
+  const openKey = useRef<string | null>(null)
+  /** The popup's hide button that was pressed, to put focus back on its row. */
+  const refocus = useRef<number | null>(null)
+  // A drawn area matches listings by their neighbourhood when it is known: so do the markers.
+  const groupMode: GroupMode = drawnArea ? 'neighborhood' : chosenMode
   const groupModeRef = useRef(groupMode)
   groupModeRef.current = groupMode
-  const callbacks = useRef({ onOpen, onFilterPlace })
-  callbacks.current = { onOpen, onFilterPlace }
+  const callbacks = useRef({ onOpen, onFilterPlace, toggleHidden, onDrawnArea })
+  callbacks.current = { onOpen, onFilterPlace, toggleHidden, onDrawnArea }
   const dark = useMedia('(prefers-color-scheme: dark)')
   const [legendData, setLegendData] = useState<{
     breaks: Array<number>
@@ -275,6 +303,15 @@ export function ListingMap({
       markerScale()
       m.getContainer().addEventListener('click', (e) => {
         const target = e.target as HTMLElement
+        const hide = target.closest<HTMLElement>('[data-hide]')
+        if (hide?.dataset.hide) {
+          const buttons = [
+            ...m.getContainer().querySelectorAll('.leaflet-popup [data-hide]'),
+          ]
+          refocus.current = e.detail === 0 ? buttons.indexOf(hide) : null
+          callbacks.current.toggleHidden(hide.dataset.hide)
+          return
+        }
         const open = target.closest<HTMLElement>('[data-open]')
         if (open?.dataset.open) {
           callbacks.current.onOpen(open.dataset.open)
@@ -286,6 +323,13 @@ export function ListingMap({
           callbacks.current.onFilterPlace(place.dataset.filterPlace)
         }
       })
+      m.on('popupopen', (e) => {
+        const key = [...markers.current].find(
+          ([, mk]) => mk.getPopup() === e.popup,
+        )?.[0]
+        openKey.current = key ?? null
+      })
+      m.on('popupclose', () => (openKey.current = null))
       resize = new ResizeObserver(() => m.invalidateSize())
       resize.observe(box.current)
       setState({ L, map: m, layer, controls, legend })
@@ -323,6 +367,10 @@ export function ListingMap({
     const { list, unmapped } = computeGroups(filtered, groupMode)
     groups.current = list
     const breaks = ppmBreaks(list)
+    const reopen = openKey.current
+    const scrollTop =
+      map.getContainer().querySelector('.leaflet-popup .pop-list')?.scrollTop ??
+      0
     layer.clearLayers()
     markers.current.clear()
     // Largest first so small groups stay clickable on top.
@@ -346,7 +394,7 @@ export function ListingMap({
         riseOnHover: true,
       })
       // Clearance so the popup isn't tucked under the map buttons.
-      m.bindPopup(() => popupHtml(g, { t, fmt, lang }), {
+      m.bindPopup(() => popupHtml(g, { t, fmt, lang, hidden }), {
         maxWidth: 340,
         minWidth: 280,
         autoPanPaddingTopLeft: [20, 20],
@@ -367,8 +415,110 @@ export function ListingMap({
       fitted.current = true
       fitTo(state, list)
     }
+    // A listing hidden from the popup: the popup stays, with the place's other listings.
+    const still = reopen ? markers.current.get(reopen) : undefined
+    if (still) {
+      still.openPopup()
+      const el = still.getPopup()?.getElement()
+      const pop = el?.querySelector('.pop-list')
+      if (pop) pop.scrollTop = scrollTop
+      if (refocus.current != null) {
+        const buttons = el?.querySelectorAll<HTMLElement>('[data-hide]') ?? []
+        buttons[Math.min(refocus.current, buttons.length - 1)]?.focus()
+      }
+    } else map.closePopup()
+    refocus.current = null
+  }, [state, filtered, groupMode, selectedPlace, lang, t, fmt, hidden])
+
+  // The drawn area, under the markers.
+  useEffect(() => {
+    if (!state || !drawnArea) return
+    const shape = state.L.polygon(drawnArea, {
+      className: 'draw-area',
+      interactive: false,
+    }).addTo(state.map)
+    return () => {
+      shape.remove()
+    }
+  }, [state, drawnArea])
+
+  // Drawing an area: press and drag around it (mouse, pen or finger) while the map holds still.
+  useEffect(() => {
+    if (!state || !drawing) return
+    const { L, map } = state
+    const el = map.getContainer()
+    const handlers = [
+      map.dragging,
+      map.touchZoom,
+      map.doubleClickZoom,
+      map.boxZoom,
+    ].filter((h) => h.enabled())
+    for (const h of handlers) h.disable()
     map.closePopup()
-  }, [state, filtered, groupMode, selectedPlace, lang, t, fmt])
+    el.classList.add('map-drawing')
+    let pointer: number | null = null
+    let pts: Array<Leaflet.Point> = []
+    let line: Leaflet.Polyline | null = null
+    const stop = () => {
+      pointer = null
+      pts = []
+      line?.remove()
+      line = null
+    }
+    const onDown = (e: PointerEvent) => {
+      if (pointer != null || e.button !== 0) return
+      if ((e.target as HTMLElement).closest('.leaflet-control')) return
+      e.preventDefault()
+      pointer = e.pointerId
+      el.setPointerCapture(pointer)
+      pts = [map.mouseEventToContainerPoint(e)]
+      line = L.polyline([map.containerPointToLatLng(pts[0])], {
+        className: 'draw-line',
+        interactive: false,
+      }).addTo(map)
+    }
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerId !== pointer || !line) return
+      const p = map.mouseEventToContainerPoint(e)
+      if (p.distanceTo(pts[pts.length - 1]) < 4) return
+      pts.push(p)
+      line.addLatLng(map.containerPointToLatLng(p))
+    }
+    const onUp = (e: PointerEvent) => {
+      if (e.pointerId !== pointer) return
+      const size = L.bounds(pts).getSize()
+      const corners = L.LineUtil.simplify(pts, 2)
+      stop()
+      // A tap or a short stroke is not an area: keep drawing.
+      if (corners.length < 3 || size.x + size.y < 40) return
+      const round = (x: number) => Math.round(x * 1e5) / 1e5
+      callbacks.current.onDrawnArea(
+        corners.map((p) => {
+          const ll = map.containerPointToLatLng(p)
+          return [round(ll.lat), round(ll.lng)]
+        }),
+      )
+      setDrawing(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawing(false)
+    }
+    el.addEventListener('pointerdown', onDown)
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerup', onUp)
+    el.addEventListener('pointercancel', stop)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      stop()
+      el.removeEventListener('pointerdown', onDown)
+      el.removeEventListener('pointermove', onMove)
+      el.removeEventListener('pointerup', onUp)
+      el.removeEventListener('pointercancel', stop)
+      document.removeEventListener('keydown', onKey)
+      el.classList.remove('map-drawing')
+      for (const h of handlers) h.enable()
+    }
+  }, [state, drawing])
 
   useImperativeHandle(
     ref,
@@ -414,12 +564,15 @@ export function ListingMap({
           <MapControls
             state={state}
             dark={dark}
-            hasHoods={hasHoods}
+            hasHoods={hasHoods && !drawnArea}
             baseLayer={baseLayer}
             groupMode={groupMode}
             onBaseLayer={onBaseLayer}
             onGroupMode={onGroupMode}
             onFit={() => fitTo(state, groups.current)}
+            drawing={drawing}
+            hasArea={!!drawnArea}
+            onDraw={() => setDrawing(!drawing)}
           />,
           state.controls,
         )}
@@ -429,9 +582,35 @@ export function ListingMap({
             {...legendData}
             unmappedActive={unmappedActive}
             onToggleUnmapped={onToggleUnmapped}
+            hasArea={!!drawnArea}
+            onClearArea={() => onDrawnArea(null)}
           />,
           state.legend,
         )}
+      {drawing && (
+        <div className="pointer-events-none absolute top-3 right-[60px] left-3 z-[1000] flex justify-center">
+          <div
+            role="status"
+            className="pointer-events-auto flex max-w-[460px] animate-in items-center gap-3 rounded-2xl bg-background py-2 pr-2 pl-4 text-foreground shadow-[var(--shadow-float)] fade-in-0 slide-in-from-top-2"
+          >
+            <div className="flex min-w-0 flex-col">
+              <span className="text-[13.5px] font-semibold">
+                {t('drawHint')}
+              </span>
+              <span className="text-[12px] text-muted-foreground">
+                {t('drawNote')}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDrawing(false)}
+              className="h-8 flex-none cursor-pointer rounded-full border-0 bg-muted px-3.5 text-[13px] font-medium text-foreground hover:bg-surface-3"
+            >
+              {t('cancel')}
+            </button>
+          </div>
+        </div>
+      )}
       <span className="sr-only">{t('viewMap')}</span>
     </>
   )
@@ -470,6 +649,9 @@ function MapControls({
   onBaseLayer,
   onGroupMode,
   onFit,
+  drawing,
+  hasArea,
+  onDraw,
 }: {
   state: MapState
   dark: boolean
@@ -479,6 +661,9 @@ function MapControls({
   onBaseLayer: (key: string) => void
   onGroupMode: (mode: GroupMode) => void
   onFit: () => void
+  drawing: boolean
+  hasArea: boolean
+  onDraw: () => void
 }) {
   const { t } = useApp()
   const [open, setOpen] = useState(false)
@@ -524,6 +709,22 @@ function MapControls({
         onClick={onFit}
       >
         <CornersOutIcon aria-hidden="true" className="size-[19px]" />
+      </button>
+      <button
+        type="button"
+        className={cn(
+          FAB,
+          'aria-pressed:bg-primary aria-pressed:text-primary-foreground',
+        )}
+        aria-pressed={drawing}
+        title={t(hasArea ? 'drawAreaAgain' : 'drawArea')}
+        aria-label={t(hasArea ? 'drawAreaAgain' : 'drawArea')}
+        onClick={() => {
+          setOpen(false)
+          onDraw()
+        }}
+      >
+        <PolygonIcon aria-hidden="true" className="size-[19px]" />
       </button>
       {open && (
         <div
@@ -597,17 +798,32 @@ function MapLegend({
   unmapped,
   unmappedActive,
   onToggleUnmapped,
+  hasArea,
+  onClearArea,
 }: {
   breaks: Array<number>
   noData: boolean
   unmapped: number
   unmappedActive: boolean
   onToggleUnmapped: () => void
+  hasArea: boolean
+  onClearArea: () => void
 }) {
   const { t, fmt } = useApp()
   const bins = breaks.length + 1
   return (
     <div className="flex flex-col items-start">
+      {hasArea && (
+        <button
+          type="button"
+          title={t('clearDrawnArea')}
+          onClick={onClearArea}
+          className="mb-2 inline-flex h-[34px] cursor-pointer items-center gap-2 rounded-full border-0 bg-primary pr-3.5 pl-3 text-[12.5px] font-medium whitespace-nowrap text-primary-foreground shadow-[var(--shadow-float)] hover:bg-primary/90"
+        >
+          <XIcon aria-hidden="true" className="size-4" />
+          <span>{t('clearDrawnArea')}</span>
+        </button>
+      )}
       {(unmapped > 0 || unmappedActive) && (
         <button
           type="button"

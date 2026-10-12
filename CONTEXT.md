@@ -15,6 +15,8 @@ The words this app uses, in code, copy and PRs.
   There is no sign-in yet; the key in a link (`?w=`) opens the same workspace on another device.
 - **Place**: the settlement a listing is in, located by the offline gazetteer (GeoNames) or OpenStreetMap. **Nbhd**:
   a big-city neighbourhood, located the same way.
+- **Drawn area**: a shape drawn on the map; only the listings inside it show. A listing counts as inside when its
+  nbhd is (or, with no nbhd, its place), and the map groups by nbhd while an area is drawn. Saved in this browser.
 - **Price band**: a `price_min`/`price_max` slice of a search, used to get past imot.bg's 1,000-result cap.
 - **New** (since the last import) and **no longer listed** (stale: missing from the latest import of every search it
   came from).
