@@ -2,14 +2,19 @@ import { describe, expect, test } from 'vitest'
 import {
   DEFAULT_FILTERS,
   applyFilters,
+  areaSearchOf,
   binOf,
   computeGroups,
   poolOf,
   ppmBreaks,
   prepare,
   rampColor,
+  rememberAreaSearch,
+  shownOf,
   sortListings,
+  validAreaSearches,
   validDrawnArea,
+  validShown,
 } from './listings'
 import type { DrawnArea, Listing, RawListing, Source } from './listings'
 import {
@@ -119,6 +124,68 @@ describe('listings', () => {
     const hidden = new Set(['b', 'gone'])
     expect(poolOf(all, hidden, false).map((l) => l.id)).toEqual(['a', 'c'])
     expect(poolOf(all, hidden, true).map((l) => l.id)).toEqual(['b'])
+  })
+
+  test('shown search: every search, only the shown links, or a clean map', () => {
+    const src = (key: string, url: string | null): Source => ({
+      ...SOURCES.get('s1')!,
+      key,
+      url,
+    })
+    const sources = [
+      src('s1', 'https://www.imot.bg/obiavi/a'),
+      src('s2', 'https://www.imot.bg/obiavi/b'),
+      src('manual', null),
+    ]
+    const all = [
+      prepare(raw('a', { sources: ['s1'] }), SOURCES),
+      prepare(raw('b', { sources: ['s2'] }), SOURCES),
+      prepare(raw('ab', { sources: ['s2', 's1'] }), SOURCES),
+      prepare(raw('m', { sources: ['manual'] }), SOURCES),
+    ]
+    const ids = (shown: Array<string> | null) =>
+      shownOf(all, sources, shown).map((l) => l.id)
+    expect(ids(null)).toEqual(['a', 'b', 'ab', 'm'])
+    expect(ids([])).toEqual([])
+    expect(ids(['https://www.imot.bg/obiavi/a'])).toEqual(['a', 'ab'])
+    expect(
+      ids(['https://www.imot.bg/obiavi/a', 'https://www.imot.bg/obiavi/b']),
+    ).toEqual(['a', 'b', 'ab'])
+    // Just started: no source yet, so nothing until the import saves its listings.
+    expect(ids(['https://www.imot.bg/obiavi/new'])).toEqual([])
+    expect(validShown(['x'])).toEqual(['x'])
+    expect(validShown([])).toEqual([])
+    expect(validShown(['x', 1])).toBeNull()
+    expect(validShown(undefined)).toBeNull()
+  })
+
+  test('area searches: remembered together with their area, newest first', () => {
+    const area: DrawnArea = [
+      [42.7, 23.3],
+      [42.6, 23.4],
+      [42.6, 23.2],
+    ]
+    const one = { urls: ['u1', 'u2'], area }
+    const two = { urls: ['u3'], area }
+    let list = rememberAreaSearch([], one)
+    list = rememberAreaSearch(list, two)
+    expect(list).toEqual([two, one])
+    expect(areaSearchOf(list, 'u2')).toBe(one)
+    expect(areaSearchOf(list, 'u9')).toBeUndefined()
+    expect(areaSearchOf(list, null)).toBeUndefined()
+    // The same search again replaces the old entry.
+    const again = { urls: ['u2', 'u4'], area }
+    expect(rememberAreaSearch(list, again)).toEqual([again, two])
+    expect(rememberAreaSearch(list, again, 1)).toEqual([again])
+    expect(
+      validAreaSearches([
+        one,
+        { urls: [], area },
+        { urls: ['u5'], area: [[1, 2]] },
+        null,
+      ]),
+    ).toEqual([one])
+    expect(validAreaSearches('nope')).toEqual([])
   })
 
   test('sorting puts listings without the value last', () => {

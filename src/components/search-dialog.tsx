@@ -83,8 +83,9 @@ export function SearchDialog({
   options,
   onOptions,
   onShowListings,
+  onStarted,
   area,
-  fromMap,
+  start,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -92,10 +93,16 @@ export function SearchDialog({
   options: ImportOptions
   onOptions: (o: ImportOptions) => void
   onShowListings: () => void
+  /** A search started: its links, the area it searched (null for a place) and its import. */
+  onStarted: (search: {
+    urls: Array<string>
+    area: DrawnArea | null
+    job: string
+  }) => void
   /** The area drawn on the map, if any. */
   area: DrawnArea | null
-  /** Opened with the map's "Search this area". */
-  fromMap: boolean
+  /** Where the search looks when the dialog opens. */
+  start: Where
 }) {
   const { t, workspace } = useApp()
   const getForm = useAction(api.searchForm.get)
@@ -105,9 +112,7 @@ export function SearchDialog({
   const [sq, setSq] = useState<SearchQueryState>(() =>
     sanitizeQuery(loadJson('searchQuery', {})),
   )
-  const [where, setWhere] = useState<Where>(() =>
-    loadJson<string>('searchWhere', 'place') === 'area' ? 'area' : 'place',
-  )
+  const [where, setWhere] = useState<Where>(start)
   const [areaData, setAreaData] = useState<DistrictsData | null>(null)
   const [form, setForm] = useState<SearchForm | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
@@ -135,7 +140,6 @@ export function SearchDialog({
     plan.searches.length <= MAX_AREA_SEARCHES
 
   useEffect(() => saveJson('searchQuery', sq), [sq])
-  useEffect(() => saveJson('searchWhere', where), [where])
 
   // The districts' points load only when an area is searched (they are a separate download).
   useEffect(() => {
@@ -188,7 +192,7 @@ export function SearchDialog({
 
   useEffect(() => {
     if (!open) return
-    if (fromMap) setWhere('area')
+    setWhere(start)
     if (view === 'job' && !running && job?.searchUrl !== links[0]?.url)
       setView('form')
     const { form: f, sq: q } = latest.current
@@ -254,6 +258,11 @@ export function SearchDialog({
         void districts
         const res = await startAreaSearch({ workspace, query, area, options })
         setLinks(res.searches)
+        onStarted({
+          urls: res.searches.map((s) => s.url),
+          area,
+          job: res.job,
+        })
       } else {
         const res = await startSearch({ workspace, query: p, options })
         setLinks([
@@ -263,6 +272,7 @@ export function SearchDialog({
             districts: p.districts.length,
           },
         ])
+        onStarted({ urls: [res.url], area: null, job: res.job })
       }
       setView('job')
       requestAnimationFrame(() => progressEl.current?.focus())

@@ -225,6 +225,8 @@ export interface MapHandle {
   highlight: (id: string, on: boolean) => void
   showOnMap: (l: Listing) => void
   fit: () => void
+  /** Draw an area, as the map's polygon button does. */
+  startDrawing: () => void
 }
 
 interface MapState {
@@ -244,11 +246,13 @@ export function ListingMap({
   selectedPlace,
   unmappedActive,
   drawnArea,
+  clean,
   onOpen,
   onFilterPlace,
   onToggleUnmapped,
   onDrawnArea,
   onSearchArea,
+  onSearchPlace,
   onBaseLayer,
   onGroupMode,
 }: {
@@ -260,12 +264,16 @@ export function ListingMap({
   selectedPlace: string
   unmappedActive: boolean
   drawnArea: DrawnArea | null
+  /** No listings shown (a new search): an area is drawn to be searched. */
+  clean: boolean
   onOpen: (id: string) => void
   onFilterPlace: (key: string) => void
   onToggleUnmapped: () => void
   onDrawnArea: (area: DrawnArea | null) => void
   /** Search imot.bg inside the drawn area. */
   onSearchArea: () => void
+  /** Search imot.bg in a place instead of drawing. */
+  onSearchPlace: () => void
   onBaseLayer: (key: string) => void
   onGroupMode: (mode: GroupMode) => void
 }) {
@@ -590,6 +598,9 @@ export function ListingMap({
       fit() {
         if (state) fitTo(state, groups.current)
       },
+      startDrawing() {
+        setDrawing(true)
+      },
     }),
     [filtered, state],
   )
@@ -632,13 +643,26 @@ export function ListingMap({
             role="status"
             className="pointer-events-auto flex max-w-[460px] animate-in items-center gap-3 rounded-2xl bg-background py-2 pr-2 pl-4 text-foreground shadow-[var(--shadow-float)] fade-in-0 slide-in-from-top-2"
           >
-            <div className="flex min-w-0 flex-col">
+            <div className="flex min-w-0 flex-col items-start">
               <span className="text-[13.5px] font-semibold">
-                {t('drawHint')}
+                {t(clean ? 'drawSearchHint' : 'drawHint')}
               </span>
-              <span className="text-[12px] text-muted-foreground">
-                {t('drawNote')}
-              </span>
+              {clean ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawing(false)
+                    onSearchPlace()
+                  }}
+                  className="cursor-pointer rounded border-0 bg-transparent p-0 text-left text-[12.5px] font-medium text-foreground-2 underline decoration-border-strong underline-offset-2 hover:text-foreground hover:decoration-current"
+                >
+                  {t('searchPlaceInstead')}
+                </button>
+              ) : (
+                <span className="text-[12px] text-muted-foreground">
+                  {t('drawNote')}
+                </span>
+              )}
             </div>
             <button
               type="button"

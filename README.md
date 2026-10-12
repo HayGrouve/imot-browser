@@ -10,12 +10,14 @@ There is no sign-in yet. Each browser gets its own private set of listings (a ra
 
 ## Using it
 
-1. **Search imot.bg** opens imot.bg's own search form: sale or rent, property types, city or province and its
-   districts, price, price per m², area, floor, and under **More filters** construction, year, features and more.
-   **Search and import** asks imot.bg for the search link and imports every page of it. The search is then kept under
-   **⋯ → Your searches**.
-2. Listings appear as soon as the search pages are read; the listing pages, with full descriptions, all photos and
-   contacts, fill in while the import continues.
+1. **New search** starts from a clean map: draw the area you want, and the search dialog opens for it. Or **Search
+   by place** for a whole city or province and its districts.
+2. The search dialog is imot.bg's own search form: sale or rent, property types, price, price per m², area, floor,
+   and under **More filters** construction, year, features and more. **Search and import** asks imot.bg for the
+   search link and imports every page of it. The search is then kept under **⋯ → Your searches**.
+3. Only the new search's listings show. They appear as soon as the search pages are read; the listing pages, with
+   full descriptions, all photos and contacts, fill in while the import continues. Earlier searches are hidden, not
+   deleted: **Show all searches** above the list brings them back.
 
 Then:
 
@@ -24,14 +26,14 @@ Then:
 - **List**: photo, place, key facts and price per listing, sorted by price, €/m², area, yard, year, update or place.
 - **Map**: one circle per place (or per neighbourhood in big cities), sized by the number of listings and coloured by
   median €/m². Four base maps; the simple one follows the system light or dark theme.
-- **Drawn area**: draw around the part of the map you want, and only the listings inside it show. **Search this area**
-  then imports just that area from imot.bg: one search per city or province it reaches into, limited to the
-  neighbourhoods, towns and villages whose centre is inside.
+- **Drawn area**: draw around the part of the map you want. On a clean map it is searched; over listings, only the
+  ones inside it show, and **Search this area** imports just that area from imot.bg. Either way that is one search
+  per city or province it reaches into, limited to the neighbourhoods, towns and villages whose centre is inside.
 - **Listing details**: gallery, key facts, features, description, agency and phone, price history across imports, a link
   to the original and a private note. ←/→ step through photos, j/k through listings.
-- **⋯ → Your searches** lists the saved searches: **Refresh** one (or all) to update it, or remove it. Price changes are
-  recorded, and listings that disappeared are flagged. Listing pages read in the last 3 days are reused unless the
-  price changed.
+- **⋯ → Your searches** lists the saved searches: **Show** one to see only its listings (an area search with its
+  area), **Refresh** one (or all) to update it, or remove it. Price changes are recorded, and listings that
+  disappeared are flagged. Listing pages read in the last 3 days are reused unless the price changed.
 
 ## How it works
 

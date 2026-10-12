@@ -18,11 +18,18 @@ The words this app uses, in code, copy and PRs.
   a big-city neighbourhood, located the same way.
 - **Drawn area**: a shape drawn on the map; only the listings inside it show. A listing counts as inside when its
   nbhd is (or, with no nbhd, its place), and the map groups by nbhd while an area is drawn. Saved in this browser.
+  Drawn on a clean map (see **Shown search**), it opens the search dialog to search it.
 - **District**: what imot.bg's search form lists under a place (`f40`): a city's neighbourhoods, or a province's towns
   and villages. `shared/districts-bg.json` holds each one's point, the one its listings get.
 - **Area search**: searching imot.bg inside the drawn area: per place it reaches into, one search with the districts
   whose point is inside (`shared/area.ts`; the server plans it again rather than trust the browser). All the searches
-  make one import.
+  make one import. This browser remembers its links together with the area, so showing it again shows all of them
+  and redraws the area.
+- **Shown search**: whose listings the list and the map show: every search's (the default), one search's (the one
+  just started from the search dialog, or one picked under "Your searches"; an area search's links count as one), or
+  none, the clean map that **New search** starts from. A listing is in a search when one of its sources has that
+  search's link. It comes before the filters, which don't change it, and earlier searches are hidden, not deleted.
+  Saved in this browser.
 - **Price band**: a `price_min`/`price_max` slice of a search, used to get past imot.bg's 1,000-result cap.
 - **New** (since the last import) and **no longer listed** (stale: missing from the latest import of every search it
   came from).

@@ -5,8 +5,8 @@ import {
   DotsThreeIcon,
   HouseSimpleIcon,
   InfoIcon,
-  ListMagnifyingGlassIcon,
   MagnifyingGlassIcon,
+  PlusIcon,
   TranslateIcon,
 } from '@phosphor-icons/react'
 import { Button } from '#/components/ui/button'
@@ -25,7 +25,7 @@ export function Topbar({
   query,
   onQuery,
   busy,
-  onSearchImot,
+  onNewSearch,
   onSearches,
   onToggleLang,
   onShare,
@@ -33,9 +33,10 @@ export function Topbar({
 }: {
   query: string
   onQuery: (q: string) => void
-  /** A search is running: the "Search imot.bg" button shows a spinner. */
+  /** A search is running: the "New search" button shows a spinner. */
   busy: boolean
-  onSearchImot: () => void
+  /** Start from a clean map. */
+  onNewSearch: () => void
   onSearches: () => void
   onToggleLang: () => void
   onShare: () => void
@@ -113,17 +114,17 @@ export function Topbar({
       <div className="flex items-center justify-end gap-1.5">
         <Button
           variant="default"
-          onClick={onSearchImot}
-          title={t('searchImot')}
-          aria-label={t('searchImot')}
+          onClick={onNewSearch}
+          title={t('newSearchTitle')}
+          aria-label={t('newSearch')}
           className={cn(
             'max-[960px]:w-[38px] max-[960px]:px-0',
             busy &&
               'after:size-2.5 after:animate-spin after:rounded-full after:border-2 after:border-current after:border-r-transparent',
           )}
         >
-          <ListMagnifyingGlassIcon aria-hidden="true" />
-          <span className="max-[960px]:hidden">{t('searchImot')}</span>
+          <PlusIcon aria-hidden="true" />
+          <span className="max-[960px]:hidden">{t('newSearch')}</span>
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger

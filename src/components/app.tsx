@@ -20,6 +20,8 @@ import {
   PAGE,
   ResultBar,
   ResultList,
+  SearchingState,
+  StartState,
 } from './results'
 import { BASE_LAYERS, ListingMap } from './listing-map'
 import type { MapHandle } from './listing-map'
@@ -38,13 +40,18 @@ import { useWorkspaceData } from '#/lib/use-data'
 import {
   DEFAULT_FILTERS,
   applyFilters,
+  areaSearchOf,
   poolOf,
   prepare,
+  rememberAreaSearch,
+  shownOf,
   sortListings,
+  validAreaSearches,
   validDrawnArea,
+  validShown,
   validSort,
 } from '#/lib/listings'
-import type { Filters, GroupMode, Sort } from '#/lib/listings'
+import type { DrawnArea, Filters, GroupMode, Sort } from '#/lib/listings'
 import { DEFAULT_OPTIONS } from '../../shared/importer'
 import type { ImportOptions } from '../../shared/importer'
 
@@ -54,9 +61,12 @@ interface Prefs {
   groupMode: GroupMode
   baseLayer: string
   filters: Filters
+  /** The shown search: the links whose listings show, null for every search's. */
+  shown: Array<string> | null
 }
 
-function initialPrefs(): Prefs {
+/** `switched`: a link opened another workspace, which starts with all of its searches shown. */
+function initialPrefs(switched: boolean): Prefs {
   const saved = loadJson<Partial<Prefs>>('ui', {})
   const lang: Lang =
     saved.lang === 'bg' || saved.lang === 'en'
@@ -78,6 +88,7 @@ function initialPrefs(): Prefs {
       ...saved.filters,
       drawnArea: validDrawnArea(saved.filters?.drawnArea),
     },
+    shown: switched ? null : validShown(saved.shown),
   }
 }
 
@@ -115,7 +126,7 @@ const NO_STARS: ReadonlySet<string> = new Set()
 export function App() {
   const [ws] = useState(resolveWorkspace)
   const workspace = ws.key
-  const [prefs, setPrefs] = usePersisted('ui', initialPrefs)
+  const [prefs, setPrefs] = usePersisted('ui', () => initialPrefs(ws.switched))
   const [stars, setStars] = usePersisted(
     'stars',
     () => new Set(loadJson<Array<string>>('stars', [])),
@@ -136,10 +147,16 @@ export function App() {
       ...loadJson<Partial<ImportOptions>>('importOptions', {}),
     }),
   )
+  // The area searches started here, so showing one again shows all its links and its area.
+  const [areaSearches, setAreaSearches] = usePersisted('areaSearches', () =>
+    validAreaSearches(loadJson('areaSearches', [])),
+  )
+  // The import a search just started, until `job` is that one: its listings are on their way.
+  const [startedJob, setStartedJob] = useState<string | null>(null)
   const [view, setView] = useState<'list' | 'map'>('list')
   const [detailId, setDetailId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<
-    null | 'searches' | 'search' | 'searchArea' | 'about' | 'share'
+    null | 'searches' | 'searchArea' | 'searchPlace' | 'about' | 'share'
   >(null)
   const [limit, setLimit] = useState(PAGE)
   const mapRef = useRef<MapHandle>(null)
@@ -173,10 +190,16 @@ export function App() {
     () => (raw ? raw.map((l) => prepare(l, sourceMap)) : null),
     [raw, sourceMap],
   )
+  // The shown search comes first: the filters, counts and map work on its listings.
+  const shown = prefs.shown
+  const scoped = useMemo(
+    () => (all ? shownOf(all, sources, shown) : null),
+    [all, sources, shown],
+  )
   const onlyHidden = prefs.filters.hidden
   const pool = useMemo(
-    () => (all ? poolOf(all, hidden, onlyHidden) : null),
-    [all, hidden, onlyHidden],
+    () => (scoped ? poolOf(scoped, hidden, onlyHidden) : null),
+    [scoped, hidden, onlyHidden],
   )
   const starsForFilter = prefs.filters.starred ? stars : NO_STARS
   const filtered = useMemo(
@@ -191,25 +214,49 @@ export function App() {
     [pool, prefs.filters, starsForFilter, prefs.sort, lang],
   )
   const multiDeal = useMemo(
-    () => new Set((all ?? []).map((l) => l.deal)).size > 1,
-    [all],
+    () => new Set((scoped ?? []).map((l) => l.deal)).size > 1,
+    [scoped],
   )
   const hasHoods = useMemo(
-    () => (all ?? []).some((l) => l.nbhd?.lat != null),
-    [all],
+    () => (scoped ?? []).some((l) => l.nbhd?.lat != null),
+    [scoped],
   )
   const starCount = useMemo(
     () => (pool ?? []).reduce((n, l) => n + (stars.has(l.id) ? 1 : 0), 0),
     [pool, stars],
   )
   const hiddenCount = useMemo(
-    () => (all ?? []).reduce((n, l) => n + (hidden.has(l.id) ? 1 : 0), 0),
+    () => (scoped ?? []).reduce((n, l) => n + (hidden.has(l.id) ? 1 : 0), 0),
+    [scoped, hidden],
+  )
+  // What "Show earlier searches" brings back.
+  const earlier = useMemo(
+    () => (all ?? []).reduce((n, l) => n + (hidden.has(l.id) ? 0 : 1), 0),
     [all, hidden],
   )
+  // Nothing in the shown search: an area drawn now is drawn to be searched.
+  const clean = scoped?.length === 0
+  const hasToolbar = !!scoped && !clean
+  // The shown search's import, while nothing of it has arrived.
+  const scopeJob =
+    shown?.length && job?.inputs.some((i) => shown.includes(i.input))
+      ? job
+      : null
+  const searching =
+    !!shown?.length && clean && (startedJob != null || jobRunning(scopeJob))
+
+  useEffect(() => {
+    if (job && job.id === startedJob) setStartedJob(null)
+  }, [job, startedJob])
 
   useEffect(() => {
     if (Date.now() - fitRequested.current < 5000) mapRef.current?.fit()
   }, [all])
+
+  // Another search shown: fit the map to it (the map fits by itself to listings that arrive later).
+  useEffect(() => {
+    mapRef.current?.fit()
+  }, [shown])
 
   useEffect(() => {
     document.documentElement.lang = lang
@@ -298,6 +345,31 @@ export function App() {
     [setPrefs],
   )
   const onQuery = useCallback((q: string) => setFilters({ q }), [setFilters])
+
+  /** Show these searches' listings (null: every search's), in the area they were drawn as. */
+  const showSearch = useCallback(
+    (urls: Array<string> | null, drawnArea: DrawnArea | null = null) => {
+      setPrefs((p) => ({
+        ...p,
+        shown: urls,
+        filters: { ...p.filters, drawnArea },
+      }))
+      setLimit(PAGE)
+      scroll.current?.scrollTo({ top: 0 })
+    },
+    [setPrefs],
+  )
+  const drawToSearch = () => {
+    if (narrow) setView('map')
+    mapRef.current?.startDrawing()
+  }
+  // A clean map, the filters as they start (the sort stays), and the pen down.
+  const newSearch = () => {
+    setPrefs((p) => ({ ...p, shown: [], filters: DEFAULT_FILTERS }))
+    setLimit(PAGE)
+    scroll.current?.scrollTo({ top: 0 })
+    drawToSearch()
+  }
   const onMore = useCallback(
     () => setLimit((n) => (n < filtered.length ? n + PAGE : n)),
     [filtered.length],
@@ -319,7 +391,7 @@ export function App() {
     )
     ro.observe(el)
     return () => ro.disconnect()
-  }, [all])
+  }, [hasToolbar])
 
   // Wide again: the list gets back the width a narrow screen squeezed.
   useEffect(() => {
@@ -331,15 +403,19 @@ export function App() {
     : -1
   const detail = detailId ? (all?.find((l) => l.id === detailId) ?? null) : null
 
-  const empty = all
-    ? filtered.length === 0
-      ? all.length === 0
-        ? 'none'
-        : 'filtered'
-      : null
-    : error
+  const empty = !all
+    ? error
       ? 'error'
       : null
+    : searching
+      ? 'searching'
+      : clean
+        ? shown?.length
+          ? 'nothing'
+          : 'start'
+        : filtered.length === 0
+          ? 'filtered'
+          : null
 
   return (
     <AppContext.Provider value={ctx}>
@@ -348,7 +424,7 @@ export function App() {
           query={prefs.filters.q}
           onQuery={onQuery}
           busy={jobRunning(job)}
-          onSearchImot={() => setDialog('search')}
+          onNewSearch={newSearch}
           onSearches={() => setDialog('searches')}
           onToggleLang={() =>
             setPrefs((p) => ({ ...p, lang: p.lang === 'bg' ? 'en' : 'bg' }))
@@ -398,7 +474,7 @@ export function App() {
                 >
                   {t('skipToMap')}
                 </a>
-                {all && all.length > 0 && (
+                {hasToolbar && (
                   <div
                     ref={toolbar}
                     className={cn(
@@ -407,8 +483,8 @@ export function App() {
                     )}
                   >
                     <FilterBar
-                      all={all}
-                      pool={pool ?? all}
+                      all={scoped}
+                      pool={pool ?? scoped}
                       filters={prefs.filters}
                       onChange={setFilters}
                       starCount={starCount}
@@ -421,8 +497,8 @@ export function App() {
                   className="min-h-0 flex-1 scroll-pt-3 overflow-auto overscroll-contain"
                 >
                   <span id="count" className="sr-only">
-                    {all
-                      ? t('listingsCount', { n: fmt.num(all.length) })
+                    {scoped
+                      ? t('listingsCount', { n: fmt.num(scoped.length) })
                       : t('appTitle')}
                   </span>
                   {pool && (
@@ -432,6 +508,7 @@ export function App() {
                       onlyHidden={onlyHidden}
                       sort={prefs.sort}
                       onSort={(sort) => setPrefs((p) => ({ ...p, sort }))}
+                      onShowAll={shown?.length ? () => showSearch(null) : null}
                     />
                   )}
                   {!all && !error && <ListSkeleton />}
@@ -447,11 +524,24 @@ export function App() {
                       scrollRoot={scroll}
                     />
                   )}
-                  {empty && (
+                  {empty === 'searching' && (
+                    <SearchingState
+                      job={jobRunning(scopeJob) ? scopeJob : null}
+                    />
+                  )}
+                  {(empty === 'start' || empty === 'nothing') && (
+                    <StartState
+                      nothing={empty === 'nothing'}
+                      earlier={earlier}
+                      onDraw={drawToSearch}
+                      onSearchPlace={() => setDialog('searchPlace')}
+                      onShowAll={() => showSearch(null)}
+                    />
+                  )}
+                  {(empty === 'error' || empty === 'filtered') && (
                     <EmptyState
                       kind={empty}
                       message={error ?? undefined}
-                      onSearch={() => setDialog('search')}
                       onClear={() => setFilters({ ...DEFAULT_FILTERS, q: '' })}
                     />
                   )}
@@ -499,6 +589,7 @@ export function App() {
                   selectedPlace={prefs.filters.place}
                   unmappedActive={prefs.filters.unmapped}
                   drawnArea={prefs.filters.drawnArea}
+                  clean={clean}
                   onOpen={setDetailId}
                   onFilterPlace={(place) => {
                     setFilters({ place })
@@ -507,8 +598,13 @@ export function App() {
                   onToggleUnmapped={() =>
                     setFilters({ unmapped: !prefs.filters.unmapped })
                   }
-                  onDrawnArea={(drawnArea) => setFilters({ drawnArea })}
+                  onDrawnArea={(drawnArea) => {
+                    setFilters({ drawnArea })
+                    // Drawn on a clean map: to be searched.
+                    if (drawnArea && clean) setDialog('searchArea')
+                  }}
                   onSearchArea={() => setDialog('searchArea')}
+                  onSearchPlace={() => setDialog('searchPlace')}
                   onBaseLayer={(baseLayer) =>
                     setPrefs((p) => ({ ...p, baseLayer }))
                   }
@@ -571,12 +667,21 @@ export function App() {
         sources={sources}
         all={all}
         deleting={deleting}
+        shown={shown}
+        areaSearches={areaSearches}
+        onShow={(url) => {
+          const group = areaSearchOf(areaSearches, url)
+          if (url == null) showSearch(null)
+          else showSearch(group?.urls ?? [url], group?.area)
+          setDialog(null)
+          setView('list')
+        }}
       />
       <SearchDialog
-        open={dialog === 'search' || dialog === 'searchArea'}
-        onOpenChange={(o) => setDialog(o ? 'search' : null)}
+        open={dialog === 'searchArea' || dialog === 'searchPlace'}
+        onOpenChange={(o) => !o && setDialog(null)}
         area={prefs.filters.drawnArea}
-        fromMap={dialog === 'searchArea'}
+        start={dialog === 'searchPlace' ? 'place' : 'area'}
         job={job}
         options={options}
         onOptions={setOptions}
@@ -584,6 +689,12 @@ export function App() {
           setView('list')
           mapRef.current?.fit()
           fitRequested.current = Date.now()
+        }}
+        onStarted={({ urls, area, job: id }) => {
+          setStartedJob(id)
+          if (area)
+            setAreaSearches((list) => rememberAreaSearch(list, { urls, area }))
+          showSearch(urls, area)
         }}
       />
       <AboutDialog

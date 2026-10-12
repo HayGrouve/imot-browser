@@ -61,8 +61,20 @@ const STRINGS = {
     yardFact: '{v} m² yard',
     floorFact: 'floor {v}',
     builtFact: 'built {v}',
-    emptyTitle: 'No listings yet',
-    emptyBody: 'Search imot.bg to browse every listing it finds on a map.',
+    startTitle: 'Start with an area',
+    startBody:
+      'Draw the area you want on the map, then choose what to search for in it. Or search a whole city or province.',
+    drawOnMap: 'Draw on the map',
+    searchByPlace: 'Search by place',
+    showEarlier: 'Show earlier searches ({n} listings)',
+    showEarlier_one: 'Show earlier searches (1 listing)',
+    searchingTitle: 'Searching imot.bg…',
+    searchingBody: 'The listings show up here as soon as they are found.',
+    nothingTitle: 'No listings from this search',
+    nothingBody:
+      'imot.bg found none, or the import stopped before saving any. Try a larger area or fewer filters.',
+    shownOne: 'Only this search',
+    showAllSearches: 'Show all searches',
     emptyFilteredTitle: 'Nothing matches these filters',
     emptyFilteredBody:
       'Widen the price or size range, or clear the filters to see everything.',
@@ -164,6 +176,8 @@ const STRINGS = {
     drawArea: 'Draw an area',
     drawAreaAgain: 'Draw a new area',
     drawHint: 'Draw around the area you want',
+    drawSearchHint: 'Draw the area you want to search',
+    searchPlaceInstead: 'Search by place instead',
     drawNote:
       'Listings sit at the centre of their neighbourhood or settlement.',
     drawnArea: 'Drawn area',
@@ -227,6 +241,8 @@ const STRINGS = {
     promo: 'Promoted listing ({p})',
 
     searchImot: 'Search imot.bg',
+    newSearch: 'New search',
+    newSearchTitle: 'Start a new search from a clean map',
     yourSearches: 'Your searches',
     sfIntro:
       'The filters of imot.bg’s own search. Every listing it finds is imported here, with a map.',
@@ -354,13 +370,16 @@ const STRINGS = {
     progFound: '{n} listings found',
     sourcesTitle: 'Saved searches',
     sourcesEmpty:
-      'No saved searches yet. Use “Search imot.bg” to find listings; the searches you run are kept here.',
+      'No saved searches yet. Use “New search” to find listings; the searches you run are kept here.',
     sourceInfo: '{n} listings · last refreshed {date}',
     sourceInfo_one: '1 listing · last refreshed {date}',
     sourceParamsLabel: 'imot.bg filters:',
     sourceCapped: 'Split into price bands',
     sourceCappedTitle:
       'Over 1,000 results, so the search was split into price bands',
+    showSearch: 'Show',
+    showSearchTitle: 'Show only this search’s listings',
+    shownTag: 'Shown',
     reimport: 'Refresh',
     reimportAll: 'Refresh all',
     removeSource: 'Remove',
@@ -523,9 +542,20 @@ const STRINGS = {
     yardFact: 'двор {v} м²',
     floorFact: 'ет. {v}',
     builtFact: '{v} г.',
-    emptyTitle: 'Още няма обяви',
-    emptyBody:
-      'Потърсете в imot.bg, за да разгледате всички намерени обяви на карта.',
+    startTitle: 'Започнете от район',
+    startBody:
+      'Очертайте на картата района, който ви интересува, и изберете какво да търсите в него. Или търсете в цял град или област.',
+    drawOnMap: 'Очертай на картата',
+    searchByPlace: 'Търси по място',
+    showEarlier: 'Покажи предишните търсения ({n} обяви)',
+    showEarlier_one: 'Покажи предишните търсения (1 обява)',
+    searchingTitle: 'Търсене в imot.bg…',
+    searchingBody: 'Обявите ще се появят тук веднага щом бъдат намерени.',
+    nothingTitle: 'Няма обяви от това търсене',
+    nothingBody:
+      'imot.bg не намери обяви или импортът спря, преди да запише някоя. Опитайте с по-голям район или с по-малко филтри.',
+    shownOne: 'Само това търсене',
+    showAllSearches: 'Покажи всички търсения',
     emptyFilteredTitle: 'Нищо не отговаря на филтрите',
     emptyFilteredBody:
       'Разширете цената или площта или изчистете филтрите, за да видите всичко.',
@@ -627,6 +657,8 @@ const STRINGS = {
     drawArea: 'Очертай район',
     drawAreaAgain: 'Очертай нов район',
     drawHint: 'Очертайте района, който ви интересува',
+    drawSearchHint: 'Очертайте района, в който да търсите',
+    searchPlaceInstead: 'Търси по място вместо това',
     drawNote: 'Обявите са в центъра на своя квартал или населено място.',
     drawnArea: 'Очертан район',
     clearDrawnArea: 'Премахни очертания район',
@@ -689,6 +721,8 @@ const STRINGS = {
     promo: 'Промотирана обява ({p})',
 
     searchImot: 'Търсене в imot.bg',
+    newSearch: 'Ново търсене',
+    newSearchTitle: 'Започнете ново търсене от чиста карта',
     yourSearches: 'Вашите търсения',
     sfIntro:
       'Филтрите на търсенето в imot.bg. Всички намерени обяви се импортират тук, заедно с карта.',
@@ -809,13 +843,16 @@ const STRINGS = {
     progFound: 'Намерени {n} обяви',
     sourcesTitle: 'Запазени търсения',
     sourcesEmpty:
-      'Още няма запазени търсения. Ползвайте „Търсене в imot.bg“, за да намерите обяви; търсенията, които пуснете, се пазят тук.',
+      'Още няма запазени търсения. Ползвайте „Ново търсене“, за да намерите обяви; търсенията, които пуснете, се пазят тук.',
     sourceInfo: '{n} обяви · последно обновено {date}',
     sourceInfo_one: '1 обява · последно обновено {date}',
     sourceParamsLabel: 'Филтри в imot.bg:',
     sourceCapped: 'Разделено по цени',
     sourceCappedTitle:
       'Над 1000 резултата, затова търсенето е разделено на ценови диапазони',
+    showSearch: 'Покажи',
+    showSearchTitle: 'Покажи само обявите от това търсене',
+    shownTag: 'Показано',
     reimport: 'Обнови',
     reimportAll: 'Обнови всички',
     removeSource: 'Премахни',

@@ -166,6 +166,72 @@ export function matchesPlace(l: Listing, key: string): boolean {
   return l.place?.key === key
 }
 
+// ---------------------------------------------------------------- the shown search
+
+/** The searches whose listings show, by link: null for every search, none for a clean map. */
+export type Shown = ReadonlyArray<string> | null
+
+/** A saved shown search, or null (every search) when it isn't a list of links. */
+export function validShown(v: unknown): Array<string> | null {
+  return Array.isArray(v) && v.every((x) => typeof x === 'string') ? v : null
+}
+
+/**
+ * The listings of the shown searches: one of a listing's sources is a search whose link is
+ * shown. A link with no source yet (its import just started) matches nothing until it saves.
+ */
+export function shownOf(
+  list: Array<Listing>,
+  sources: ReadonlyArray<Source>,
+  shown: Shown,
+): Array<Listing> {
+  if (!shown) return list
+  const urls = new Set(shown)
+  const keys = new Set(
+    sources.filter((s) => s.url != null && urls.has(s.url)).map((s) => s.key),
+  )
+  if (!keys.size) return []
+  return list.filter((l) => l.sources.some((k) => keys.has(k)))
+}
+
+/** An area search's links (one per place it reaches into) and the area it was drawn as. */
+export interface AreaSearch {
+  urls: Array<string>
+  area: DrawnArea
+}
+
+/** The area searches saved in this browser, without any that aren't one. */
+export function validAreaSearches(v: unknown): Array<AreaSearch> {
+  if (!Array.isArray(v)) return []
+  return v.flatMap((x: unknown) => {
+    const { urls, area } = (x ?? {}) as Partial<
+      Record<keyof AreaSearch, unknown>
+    >
+    const shape = validDrawnArea(area)
+    return shape && validShown(urls)?.length
+      ? [{ urls: urls as Array<string>, area: shape }]
+      : []
+  })
+}
+
+/** Remember an area search: newest first, in place of one that shares a link, at most `max`. */
+export function rememberAreaSearch(
+  list: Array<AreaSearch>,
+  entry: AreaSearch,
+  max = 20,
+): Array<AreaSearch> {
+  const rest = list.filter((s) => !s.urls.some((u) => entry.urls.includes(u)))
+  return [entry, ...rest].slice(0, max)
+}
+
+/** The area search a link was part of, if this browser started it. */
+export function areaSearchOf(
+  list: ReadonlyArray<AreaSearch>,
+  url: string | null,
+): AreaSearch | undefined {
+  return url == null ? undefined : list.find((s) => s.urls.includes(url))
+}
+
 /** The listings the filters pick from: the hidden ones, or all the others. */
 export function poolOf(
   list: Array<Listing>,
