@@ -6,18 +6,21 @@ import { Input } from '#/components/ui/input'
 import { useApp } from './app-context'
 import { DIALOG, DialogHead } from './searches-dialog'
 import { workspaceLink } from '#/lib/workspace'
+import type { SharedView } from '#/lib/share'
 
-/** The link that opens this browser's listings on another device (there is no sign-in yet). */
+/** The link that opens this browser's listings, as shown now, on another device (there is no sign-in yet). */
 export function ShareDialog({
   open,
   onOpenChange,
+  view,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  view: SharedView | null
 }) {
   const { t, workspace } = useApp()
   const [copied, setCopied] = useState(false)
-  const link = workspaceLink(workspace)
+  const link = workspaceLink(workspace, view ?? undefined)
   return (
     <Dialog
       open={open}

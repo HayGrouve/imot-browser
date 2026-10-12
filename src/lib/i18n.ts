@@ -456,7 +456,7 @@ const STRINGS = {
     shareData: 'Open on another device',
     shareTitle: 'Your listings on another device',
     shareBody:
-      'Your listings are tied to this browser; there is no sign-in yet. Open this link on another device to see and update the same listings. Anyone with the link can do the same, so keep it to yourself.',
+      'Your listings are tied to this browser; there is no sign-in yet. Open this link on another device to see and update the same listings, with the search, filters and drawn area you have now. Anyone with the link can do the same, so keep it to yourself.',
     copyLink: 'Copy link',
     copied: 'Link copied',
     cancel: 'Cancel',
@@ -929,7 +929,7 @@ const STRINGS = {
     shareData: 'Отвори на друго устройство',
     shareTitle: 'Обявите ви на друго устройство',
     shareBody:
-      'Обявите са свързани с този браузър; вход все още няма. Отворете този линк на друго устройство, за да виждате и обновявате същите обяви. Всеки с линка може същото, затова не го споделяйте.',
+      'Обявите са свързани с този браузър; вход все още няма. Отворете този линк на друго устройство, за да виждате и обновявате същите обяви, със сегашното търсене, филтри и очертан район. Всеки с линка може същото, затова не го споделяйте.',
     copyLink: 'Копирай линка',
     copied: 'Линкът е копиран',
     cancel: 'Отказ',

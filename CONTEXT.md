@@ -13,7 +13,9 @@ The words this app uses, in code, copy and PRs.
   Steps: search pages → listing pages → places
   online → done. Only one runs at a time for everyone; the others are queued.
 - **Workspace**: the random key a browser makes on its first visit. All listings, sources and imports belong to one.
-  There is no sign-in yet; the key in a link (`?w=`) opens the same workspace on another device.
+  There is no sign-in yet; the key in a link (`?w=`) opens the same workspace on another device, and the view it
+  carries (`&v=`: the shown search, filters, sort, and the hidden and starred listings among them) shows the same
+  listings there.
 - **Place**: the settlement a listing is in, located by the offline gazetteer (GeoNames) or OpenStreetMap. **Nbhd**:
   a big-city neighbourhood, located the same way.
 - **Drawn area**: a shape drawn on the map; only the listings inside it show. A listing counts as inside when its

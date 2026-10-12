@@ -36,6 +36,7 @@ import type { Lang, Params, StringKey } from '#/lib/i18n'
 import { makeFormat } from '#/lib/format'
 import { loadJson, saveJson } from '#/lib/storage'
 import { resolveWorkspace } from '#/lib/workspace'
+import type { SharedView } from '#/lib/share'
 import { useWorkspaceData } from '#/lib/use-data'
 import {
   DEFAULT_FILTERS,
@@ -65,8 +66,9 @@ interface Prefs {
   shown: Array<string> | null
 }
 
-/** `switched`: a link opened another workspace, which starts with all of its searches shown. */
-function initialPrefs(switched: boolean): Prefs {
+/** `switched`: a link opened another workspace, which starts with all of its searches shown
+ *  and no filters, unless the link carries the `view` it was shared with. */
+function initialPrefs(switched: boolean, view: SharedView | null): Prefs {
   const saved = loadJson<Partial<Prefs>>('ui', {})
   const lang: Lang =
     saved.lang === 'bg' || saved.lang === 'en'
@@ -76,19 +78,24 @@ function initialPrefs(switched: boolean): Prefs {
         : 'en'
   return {
     lang,
-    sort: validSort(saved.sort),
+    sort: view?.sort ?? validSort(saved.sort),
     groupMode:
       saved.groupMode === 'neighborhood' ? 'neighborhood' : 'settlement',
     baseLayer:
       saved.baseLayer && saved.baseLayer in BASE_LAYERS
         ? saved.baseLayer
         : 'light',
-    filters: {
-      ...DEFAULT_FILTERS,
-      ...saved.filters,
-      drawnArea: validDrawnArea(saved.filters?.drawnArea),
-    },
-    shown: switched ? null : validShown(saved.shown),
+    // Another workspace's filters (a drawn area, a price) would hide this one's listings.
+    filters:
+      view?.filters ??
+      (switched
+        ? DEFAULT_FILTERS
+        : {
+            ...DEFAULT_FILTERS,
+            ...saved.filters,
+            drawnArea: validDrawnArea(saved.filters?.drawnArea),
+          }),
+    shown: view ? view.shown : switched ? null : validShown(saved.shown),
   }
 }
 
@@ -126,15 +133,26 @@ const NO_STARS: ReadonlySet<string> = new Set()
 export function App() {
   const [ws] = useState(resolveWorkspace)
   const workspace = ws.key
-  const [prefs, setPrefs] = usePersisted('ui', () => initialPrefs(ws.switched))
+  const [prefs, setPrefs] = usePersisted('ui', () =>
+    initialPrefs(ws.switched, ws.view),
+  )
+  // A shared view brings its stars and hidden listings along.
   const [stars, setStars] = usePersisted(
     'stars',
-    () => new Set(loadJson<Array<string>>('stars', [])),
+    () =>
+      new Set([
+        ...loadJson<Array<string>>('stars', []),
+        ...(ws.view?.stars ?? []),
+      ]),
     (s) => [...s],
   )
   const [hidden, setHidden] = usePersisted(
     'hidden',
-    () => new Set(loadJson<Array<string>>('hidden', [])),
+    () =>
+      new Set([
+        ...loadJson<Array<string>>('hidden', []),
+        ...(ws.view?.hidden ?? []),
+      ]),
     (s) => [...s],
   )
   const [notes, setNotes] = usePersisted('notes', () =>
@@ -148,9 +166,10 @@ export function App() {
     }),
   )
   // The area searches started here, so showing one again shows all its links and its area.
-  const [areaSearches, setAreaSearches] = usePersisted('areaSearches', () =>
-    validAreaSearches(loadJson('areaSearches', [])),
-  )
+  const [areaSearches, setAreaSearches] = usePersisted('areaSearches', () => {
+    const list = validAreaSearches(loadJson('areaSearches', []))
+    return ws.view?.area ? rememberAreaSearch(list, ws.view.area) : list
+  })
   // The import a search just started, until `job` is that one: its listings are on their way.
   const [startedJob, setStartedJob] = useState<string | null>(null)
   const [view, setView] = useState<'list' | 'map'>('list')
@@ -264,7 +283,8 @@ export function App() {
   }, [lang, t])
 
   useEffect(() => {
-    if (ws.switched) toast.success(translate(lang, 'workspaceSwitched'))
+    if (ws.switched || ws.view)
+      toast.success(translate(lang, 'workspaceSwitched'))
     // Once, for the link that opened this page.
   }, [])
 
@@ -397,6 +417,30 @@ export function App() {
   useEffect(() => {
     if (!narrow) panes.current?.setLayout(paneLayout())
   }, [narrow])
+
+  // What the share link opens on another device: this view, and the marks
+  // (among the shown search's listings) that change what it shows.
+  const shareView = useMemo<SharedView | null>(() => {
+    if (dialog !== 'share') return null
+    const ids = (scoped ?? []).map((l) => l.id)
+    return {
+      shown,
+      filters: prefs.filters,
+      sort: prefs.sort,
+      hidden: ids.filter((id) => hidden.has(id)),
+      stars: ids.filter((id) => stars.has(id)),
+      area: (shown?.length && areaSearchOf(areaSearches, shown[0])) || null,
+    }
+  }, [
+    dialog,
+    scoped,
+    shown,
+    prefs.filters,
+    prefs.sort,
+    hidden,
+    stars,
+    areaSearches,
+  ])
 
   const detailIndex = detailId
     ? filtered.findIndex((l) => l.id === detailId)
@@ -704,6 +748,7 @@ export function App() {
       <ShareDialog
         open={dialog === 'share'}
         onOpenChange={(o) => setDialog(o ? 'share' : null)}
+        view={shareView}
       />
     </AppContext.Provider>
   )
