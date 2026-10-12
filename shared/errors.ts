@@ -13,3 +13,6 @@ export type ErrorCode =
   | 'formNotRecognised'
   | 'stalled'
   | 'searchNotFound'
+  | 'badArea'
+  | 'areaEmpty'
+  | 'areaTooBig'

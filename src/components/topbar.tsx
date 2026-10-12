@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  CloudArrowDownIcon,
+  ClockCounterClockwiseIcon,
   DevicesIcon,
   DotsThreeIcon,
-  FileCsvIcon,
   HouseSimpleIcon,
   InfoIcon,
-  ListMagnifyingGlassIcon,
   MagnifyingGlassIcon,
+  PlusIcon,
   TranslateIcon,
 } from '@phosphor-icons/react'
 import { Button } from '#/components/ui/button'
@@ -26,19 +25,19 @@ export function Topbar({
   query,
   onQuery,
   busy,
-  onSearchImot,
-  onImport,
-  onCsv,
+  onNewSearch,
+  onSearches,
   onToggleLang,
   onShare,
   onAbout,
 }: {
   query: string
   onQuery: (q: string) => void
+  /** A search is running: the "New search" button shows a spinner. */
   busy: boolean
-  onSearchImot: () => void
-  onImport: () => void
-  onCsv: () => void
+  /** Start from a clean map. */
+  onNewSearch: () => void
+  onSearches: () => void
   onToggleLang: () => void
   onShare: () => void
   onAbout: () => void
@@ -114,28 +113,18 @@ export function Topbar({
       </label>
       <div className="flex items-center justify-end gap-1.5">
         <Button
-          variant="outline"
-          onClick={onSearchImot}
-          title={t('searchImot')}
-          aria-label={t('searchImot')}
-          className="max-[960px]:w-[38px] max-[960px]:px-0"
-        >
-          <ListMagnifyingGlassIcon aria-hidden="true" />
-          <span className="max-[960px]:hidden">{t('searchImot')}</span>
-        </Button>
-        <Button
-          variant="outline"
-          onClick={onImport}
-          title={t('import')}
-          aria-label={t('import')}
+          variant="default"
+          onClick={onNewSearch}
+          title={t('newSearchTitle')}
+          aria-label={t('newSearch')}
           className={cn(
             'max-[960px]:w-[38px] max-[960px]:px-0',
             busy &&
               'after:size-2.5 after:animate-spin after:rounded-full after:border-2 after:border-current after:border-r-transparent',
           )}
         >
-          <CloudArrowDownIcon aria-hidden="true" />
-          <span className="max-[960px]:hidden">{t('import')}</span>
+          <PlusIcon aria-hidden="true" />
+          <span className="max-[960px]:hidden">{t('newSearch')}</span>
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -151,9 +140,9 @@ export function Topbar({
             <DotsThreeIcon aria-hidden="true" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[248px]">
-            <DropdownMenuItem onClick={onCsv}>
-              <FileCsvIcon aria-hidden="true" />
-              {t('exportCsv')}
+            <DropdownMenuItem onClick={onSearches}>
+              <ClockCounterClockwiseIcon aria-hidden="true" />
+              {t('yourSearches')}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onShare}>
               <DevicesIcon aria-hidden="true" />

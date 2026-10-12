@@ -4,13 +4,12 @@ import {
   ArrowsDownUpIcon,
   CalendarBlankIcon,
   CaretDownIcon,
-  CloudArrowDownIcon,
   EyeIcon,
   EyeSlashIcon,
   FunnelSimpleIcon,
-  HouseSimpleIcon,
   ImageIcon,
   ListMagnifyingGlassIcon,
+  PolygonIcon,
   RulerIcon,
   StairsIcon,
   StarIcon,
@@ -30,6 +29,8 @@ import {
 } from '#/components/ui/empty'
 import { cn } from '#/lib/utils'
 import { useApp } from './app-context'
+import { JobView } from './job-view'
+import type { Job } from './job-view'
 import { SORTS, isUnmapped } from '#/lib/listings'
 import type { Listing, Sort } from '#/lib/listings'
 import {
@@ -52,61 +53,85 @@ export function ResultBar({
   onlyHidden,
   sort,
   onSort,
+  onShowAll,
 }: {
   total: number
   shown: number
   onlyHidden: boolean
   sort: Sort
   onSort: (s: Sort) => void
+  /** Only one search is shown: say so, and offer all of them. */
+  onShowAll: (() => void) | null
 }) {
   const { t, fmt } = useApp()
   if (!total) return null
   return (
-    <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-1.5 max-[720px]:px-4 max-[720px]:pt-3.5 max-[720px]:pb-1">
-      <h2
-        aria-live="polite"
-        className="m-0 text-[15px] font-semibold tracking-[-0.01em] tabular"
-      >
-        {shown === total ? (
-          t(onlyHidden ? 'hiddenCount' : 'listingsCount', {
-            n: fmt.num(total),
-          })
-        ) : (
-          <>
-            {fmt.num(shown)}{' '}
-            <span className="font-[450] text-muted-foreground">
-              {t(onlyHidden ? 'countOfHidden' : 'countOf', {
-                total: fmt.num(total),
-              })}
-            </span>
-          </>
-        )}
-      </h2>
-      <label className="relative inline-flex h-[34px] cursor-pointer items-center gap-1.5 rounded-full pr-2.5 pl-3 text-foreground-2 hover:bg-muted has-[select:focus-visible]:ring-2 has-[select:focus-visible]:ring-ring">
-        <span className="sr-only">{t('sortLabel')}</span>
-        <ArrowsDownUpIcon aria-hidden="true" className="size-4" />
-        <select
-          value={`${sort.key}:${sort.dir}`}
-          onChange={(e) => {
-            const [key, dir] = e.target.value.split(':')
-            onSort({
-              key: key as Sort['key'],
-              dir: Number(dir) === -1 ? -1 : 1,
-            })
-          }}
-          className="[field-sizing:content] h-full cursor-pointer appearance-none rounded-none border-0 bg-transparent pr-[18px] text-[13.5px] font-medium text-foreground outline-none"
+    <div className="px-5 pt-4 pb-1.5 max-[720px]:px-4 max-[720px]:pt-3.5 max-[720px]:pb-1">
+      <div className="flex items-center justify-between gap-3">
+        <h2
+          aria-live="polite"
+          className="m-0 text-[15px] font-semibold tracking-[-0.01em] tabular"
         >
-          {SORTS.map(([k, d, label]) => (
-            <option key={`${k}:${d}`} value={`${k}:${d}`}>
-              {t(label)}
-            </option>
-          ))}
-        </select>
-        <CaretDownIcon
-          aria-hidden="true"
-          className="pointer-events-none absolute right-2.5 size-3.5 text-muted-foreground"
-        />
-      </label>
+          {shown === total ? (
+            t(onlyHidden ? 'hiddenCount' : 'listingsCount', {
+              n: fmt.num(total),
+            })
+          ) : (
+            <>
+              {fmt.num(shown)}{' '}
+              <span className="font-[450] text-muted-foreground">
+                {t(onlyHidden ? 'countOfHidden' : 'countOf', {
+                  total: fmt.num(total),
+                })}
+              </span>
+            </>
+          )}
+        </h2>
+        <label className="relative inline-flex h-[34px] cursor-pointer items-center gap-1.5 rounded-full pr-2.5 pl-3 text-foreground-2 hover:bg-muted has-[select:focus-visible]:ring-2 has-[select:focus-visible]:ring-ring">
+          <span className="sr-only">{t('sortLabel')}</span>
+          <ArrowsDownUpIcon aria-hidden="true" className="size-4" />
+          <select
+            value={`${sort.key}:${sort.dir}`}
+            onChange={(e) => {
+              const [key, dir] = e.target.value.split(':')
+              onSort({
+                key: key as Sort['key'],
+                dir: Number(dir) === -1 ? -1 : 1,
+              })
+            }}
+            className="[field-sizing:content] h-full cursor-pointer appearance-none rounded-none border-0 bg-transparent pr-[18px] text-[13.5px] font-medium text-foreground outline-none"
+          >
+            {SORTS.map(([k, d, label]) => (
+              <option key={`${k}:${d}`} value={`${k}:${d}`}>
+                {t(label)}
+              </option>
+            ))}
+          </select>
+          <CaretDownIcon
+            aria-hidden="true"
+            className="pointer-events-none absolute right-2.5 size-3.5 text-muted-foreground"
+          />
+        </label>
+      </div>
+      {onShowAll && (
+        <p className="m-0 flex flex-wrap items-center gap-x-1.5 text-[13px] text-foreground-2">
+          <ListMagnifyingGlassIcon
+            aria-hidden="true"
+            className="size-[15px] text-muted-foreground"
+          />
+          <span>{t('shownOne')}</span>
+          <span aria-hidden="true" className="text-muted-foreground">
+            ·
+          </span>
+          <Button
+            variant="link"
+            className="h-7 px-0.5 text-[13px]"
+            onClick={onShowAll}
+          >
+            {t('showAllSearches')}
+          </Button>
+        </p>
+      )}
     </div>
   )
 }
@@ -508,34 +533,29 @@ export function ListSkeleton() {
   )
 }
 
+const EMPTY = 'border-0 px-6 pt-14 pb-16 max-[1000px]:pb-24'
+const EMPTY_ICON =
+  'mb-2.5 size-14 rounded-full bg-muted text-[26px] text-muted-foreground'
+
 export function EmptyState({
   kind,
   message,
-  onSearch,
-  onImport,
   onClear,
 }: {
-  kind: 'error' | 'none' | 'filtered'
+  kind: 'error' | 'filtered'
   message?: string
-  onSearch: () => void
-  onImport: () => void
   onClear: () => void
 }) {
   const { t } = useApp()
   const [Icon, title, body] =
     kind === 'error'
       ? [WarningIcon, t('loadErrorTitle'), t('loadErrorBody', { message })]
-      : kind === 'none'
-        ? [HouseSimpleIcon, t('emptyTitle'), t('emptyBody')]
-        : [FunnelSimpleIcon, t('emptyFilteredTitle'), t('emptyFilteredBody')]
+      : [FunnelSimpleIcon, t('emptyFilteredTitle'), t('emptyFilteredBody')]
   return (
-    <Empty className="border-0 px-6 pt-14 pb-16 max-[1000px]:pb-24">
+    <Empty className={EMPTY}>
       <EmptyHeader>
-        <EmptyMedia className="mb-2.5 size-14 rounded-full bg-muted text-[26px] text-muted-foreground">
-          <Icon
-            aria-hidden="true"
-            weight={kind === 'none' ? 'fill' : 'regular'}
-          />
+        <EmptyMedia className={EMPTY_ICON}>
+          <Icon aria-hidden="true" />
         </EmptyMedia>
         <EmptyTitle className="text-base font-semibold tracking-[-0.01em]">
           {title}
@@ -544,24 +564,91 @@ export function EmptyState({
       </EmptyHeader>
       {kind !== 'error' && (
         <EmptyContent className="flex-row flex-wrap justify-center">
-          {kind === 'none' ? (
-            <>
-              <Button onClick={onSearch}>
-                <ListMagnifyingGlassIcon aria-hidden="true" />
-                {t('searchImot')}
-              </Button>
-              <Button variant="outline" onClick={onImport}>
-                <CloudArrowDownIcon aria-hidden="true" />
-                {t('import')}
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" onClick={onClear}>
-              {t('clearAll')}
-            </Button>
-          )}
+          <Button variant="outline" onClick={onClear}>
+            {t('clearAll')}
+          </Button>
         </EmptyContent>
       )}
+    </Empty>
+  )
+}
+
+/**
+ * Nothing shown yet: a new search (a clean map), a new workspace, or a shown search that found
+ * nothing. Start one by drawing an area or picking a place, or go back to the earlier ones.
+ */
+export function StartState({
+  nothing,
+  earlier,
+  onDraw,
+  onSearchPlace,
+  onShowAll,
+}: {
+  /** The shown search has no listings. */
+  nothing: boolean
+  /** Listings from the other searches (0: none to go back to). */
+  earlier: number
+  onDraw: () => void
+  onSearchPlace: () => void
+  onShowAll: () => void
+}) {
+  const { t, fmt } = useApp()
+  return (
+    <Empty className={EMPTY}>
+      <EmptyHeader>
+        <EmptyMedia className={EMPTY_ICON}>
+          {nothing ? (
+            <ListMagnifyingGlassIcon aria-hidden="true" />
+          ) : (
+            <PolygonIcon aria-hidden="true" />
+          )}
+        </EmptyMedia>
+        <EmptyTitle className="text-base font-semibold tracking-[-0.01em]">
+          {t(nothing ? 'nothingTitle' : 'startTitle')}
+        </EmptyTitle>
+        <EmptyDescription className="max-w-[44ch]">
+          {t(nothing ? 'nothingBody' : 'startBody')}
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent className="flex-row flex-wrap justify-center">
+        <Button onClick={onDraw}>
+          <PolygonIcon aria-hidden="true" />
+          {t('drawOnMap')}
+        </Button>
+        <Button variant="outline" onClick={onSearchPlace}>
+          <ListMagnifyingGlassIcon aria-hidden="true" />
+          {t('searchByPlace')}
+        </Button>
+      </EmptyContent>
+      {earlier > 0 && (
+        <Button
+          variant="link"
+          className="text-[13px] text-foreground-2"
+          onClick={onShowAll}
+        >
+          {t('showEarlier', { n: fmt.num(earlier) })}
+        </Button>
+      )}
+    </Empty>
+  )
+}
+
+/** The shown search's import is still running and nothing has arrived yet. */
+export function SearchingState({ job }: { job: Job | null | undefined }) {
+  const { t } = useApp()
+  return (
+    <Empty className={cn(EMPTY, 'gap-5')}>
+      <EmptyHeader>
+        <EmptyTitle className="text-base font-semibold tracking-[-0.01em]">
+          {t('searchingTitle')}
+        </EmptyTitle>
+        <EmptyDescription className="max-w-[44ch]">
+          {t('searchingBody')}
+        </EmptyDescription>
+      </EmptyHeader>
+      <div className="w-full max-w-[440px] text-left">
+        <JobView job={job} />
+      </div>
     </Empty>
   )
 }

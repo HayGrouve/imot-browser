@@ -287,8 +287,6 @@
 .leaflet-popup-content {
   margin: 0;
   font: 13px/1.45 var(--font-sans);
-  width: auto !important;
-  min-width: 280px;
 }
 .leaflet-container a.leaflet-popup-close-button {
   top: 10px;
@@ -338,7 +336,7 @@
   list-style: none;
   margin: 0 -8px 10px;
   padding: 0;
-  max-height: 252px;
+  max-height: 340px;
   overflow: auto;
 }
 .pop-list li {
@@ -395,8 +393,8 @@
 }
 .pop-list img,
 .pop-nophoto {
-  width: 52px;
-  height: 39px;
+  width: 84px;
+  height: 63px;
   flex: 0 0 auto;
   object-fit: cover;
   border-radius: 6px;
@@ -405,10 +403,60 @@
 .pop-desc {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   color: var(--foreground-2);
+  overflow-wrap: anywhere;
 }
 .pop-desc .muted {
   color: var(--muted-foreground);
+}
+.pop-kind {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+/* The list's Tag colours, smaller. */
+.pop-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pop-tag-new {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.pop-tag-stale {
+  background: var(--warn);
+  color: var(--warn-foreground);
+}
+.pop-star {
+  color: var(--star);
+  font-size: 14px;
+  line-height: 1;
+}
+.pop-price {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+.pop-ppm {
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.pop-stale > * {
+  opacity: 0.55;
 }
 .pop-list .more-n {
   font-size: 12px;

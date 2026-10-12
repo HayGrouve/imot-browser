@@ -2,9 +2,10 @@
 
 // The "Search imot.bg" dialog: imot.bg's own search form (read live, cached),
 // and its link builder, which turns the filled-in form into a search link that
-// is then imported.
+// is then imported. A drawn area becomes one search per place it reaches into.
 
 import { ConvexError, v } from 'convex/values'
+import type { Infer } from 'convex/values'
 import { action } from './_generated/server'
 import type { ActionCtx } from './_generated/server'
 import { internal } from './_generated/api'
@@ -14,6 +15,8 @@ import { fail } from './lib/errors'
 import { spend } from './lib/rateLimit'
 import { checkWorkspace } from './lib/workspace'
 import { optionsV } from './validators'
+import { MAX_AREA_SEARCHES, planArea, validArea } from '../shared/area'
+import type { DistrictsData } from '../shared/area'
 import { classifyUrl } from '../shared/parse'
 import {
   BUILDER_URL,
@@ -25,7 +28,8 @@ import {
   locationFormParams,
   parseSearchForm,
 } from '../shared/searchform'
-import type { SearchDeal, SearchForm } from '../shared/searchform'
+import type { SearchDeal, SearchForm, SearchQuery } from '../shared/searchform'
+import districtsData from '../shared/districts-bg.json'
 
 const FORM_TTL_MS = 6 * 3600_000
 
@@ -117,6 +121,15 @@ const queryV = v.object({
   videoOnly: v.boolean(),
 })
 
+/** imot.bg's link builder: the search link for a filled-in form. */
+async function linkFor(fetcher: Fetcher, query: SearchQuery): Promise<string> {
+  const res = await fetcher.post(BUILDER_URL, buildSearchParams(query))
+  const href = builderResult(res.html)
+  const c = href ? classifyUrl(href) : null
+  if (c?.kind !== 'search') fail('imotBuilder')
+  return c.url
+}
+
 /** Ask imot.bg to build the search link for the filled-in form, then import it. */
 export const startSearch = action({
   args: { workspace: v.string(), query: queryV, options: optionsV },
@@ -127,21 +140,79 @@ export const startSearch = action({
   ): Promise<{ url: string; job: Id<'imports'> }> => {
     checkWorkspace(workspace)
     await ctx.runMutation(internal.imports.reserve, { workspace })
-    const url = await fromImot(async () => {
-      const res = await new Fetcher({
-        minIntervalMs: 350,
-        concurrency: 1,
-      }).post(BUILDER_URL, buildSearchParams(query))
-      const href = builderResult(res.html)
-      const c = href ? classifyUrl(href) : null
-      if (c?.kind !== 'search') fail('imotBuilder')
-      return c.url
-    })
+    const url = await fromImot(() =>
+      linkFor(new Fetcher({ minIntervalMs: 350, concurrency: 1 }), query),
+    )
     const job = await ctx.runMutation(internal.imports.enqueueSearch, {
       workspace,
-      url,
+      urls: [url],
       options,
     })
     return { url, job }
+  },
+})
+
+const areaSearchV = v.object({
+  location: v.string(),
+  districts: v.number(),
+  url: v.string(),
+})
+
+/**
+ * Search inside a drawn area: per place it reaches into, the districts whose point is inside
+ * (shared/area.ts), with the form's other filters. All the links go into one import.
+ */
+export const startAreaSearch = action({
+  args: {
+    workspace: v.string(),
+    query: queryV.omit('location', 'districts'),
+    area: v.array(v.array(v.number())),
+    options: optionsV,
+  },
+  returns: v.object({
+    searches: v.array(areaSearchV),
+    job: v.id('imports'),
+  }),
+  handler: async (
+    ctx,
+    { workspace, query, area, options },
+  ): Promise<{
+    searches: Array<Infer<typeof areaSearchV>>
+    job: Id<'imports'>
+  }> => {
+    checkWorkspace(workspace)
+    if (!isSearchDeal(query.deal)) fail('badRequest')
+    const deal = query.deal
+    const poly = validArea(area)
+    if (!poly) fail('badArea')
+    // The plan is made here, from the area: a district list from the browser isn't trusted.
+    const plan = planArea(poly, districtsData as unknown as DistrictsData)
+    if (!plan.searches.length) fail('areaEmpty')
+    if (plan.searches.length > MAX_AREA_SEARCHES)
+      fail('areaTooBig', {
+        searches: plan.searches.length,
+        max: MAX_AREA_SEARCHES,
+      })
+    await ctx.runMutation(internal.imports.reserve, { workspace })
+    const fetcher = new Fetcher({ minIntervalMs: 350, concurrency: 1 })
+    const searches: Array<Infer<typeof areaSearchV>> = []
+    for (const s of plan.searches) {
+      // imot.bg's builder drops districts it doesn't know, and with none left it would search
+      // the whole place: keep to the ones its form offers today.
+      const form = await formFor(ctx, deal, s.location)
+      const districts = s.districts.filter((d) => form.districts.includes(d))
+      if (!districts.length) continue
+      const url = await fromImot(() =>
+        linkFor(fetcher, { ...query, location: s.location, districts }),
+      )
+      searches.push({ location: s.location, districts: districts.length, url })
+    }
+    if (!searches.length) fail('areaEmpty')
+    const job = await ctx.runMutation(internal.imports.enqueueSearch, {
+      workspace,
+      urls: searches.map((s) => s.url),
+      options,
+    })
+    return { searches, job }
   },
 })

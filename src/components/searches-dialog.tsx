@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation } from 'convex/react'
 import {
   ArrowClockwiseIcon,
-  CloudArrowDownIcon,
+  PolygonIcon,
   TrashIcon,
   XIcon,
 } from '@phosphor-icons/react'
@@ -18,12 +18,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '#/components/ui/alert-dialog'
-import { Textarea } from '#/components/ui/textarea'
 import { useApp, errorText } from './app-context'
-import { ImportOptionsPanel, JobError, JobView, jobRunning } from './job-view'
+import { JobError, JobView, jobRunning } from './job-view'
 import type { Job } from './job-view'
-import { countBy } from '#/lib/listings'
-import type { Listing, Source } from '#/lib/listings'
+import { areaSearchOf, countBy } from '#/lib/listings'
+import type { AreaSearch, Listing, Shown, Source } from '#/lib/listings'
 import { safeUrl } from '#/lib/urls'
 import type { ImportOptions } from '../../shared/importer'
 
@@ -101,33 +100,40 @@ export function Confirm({
   )
 }
 
-export function ImportDialog({
+/** The saved searches: show, re-run, remove, and "Delete all data". New searches start from the search dialog. */
+export function SearchesDialog({
   open,
   onOpenChange,
   job,
   options,
-  onOptions,
   sources,
   all,
   deleting,
+  shown,
+  areaSearches,
+  onShow,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   job: Job | null | undefined
+  /** The saved options: a re-run uses them. */
   options: ImportOptions
-  onOptions: (o: ImportOptions) => void
   sources: Array<Source>
   all: Array<Listing> | null
   /** "Delete all data" or a removed search is still being deleted. */
   deleting: boolean
+  /** The shown search's links (null: every search). */
+  shown: Shown
+  /** The area searches this browser started: a link shows with the rest of its area. */
+  areaSearches: ReadonlyArray<AreaSearch>
+  /** Show only this search's listings (with its area's other links), or null for all. */
+  onShow: (url: string | null) => void
 }) {
   const { t, fmt, workspace } = useApp()
-  const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<
     null | { kind: 'all' } | { kind: 'source'; key: string }
   >(null)
-  const input = useRef<HTMLTextAreaElement>(null)
   const start = useMutation(api.imports.start)
   const cancel = useMutation(api.imports.cancel)
   const removeSource = useMutation(api.sources.remove)
@@ -174,87 +180,72 @@ export function ImportDialog({
       <DialogContent
         showCloseButton={false}
         className={`${DIALOG} w-[min(680px,calc(100vw-32px))]`}
-        aria-labelledby="importTitle"
+        aria-labelledby="searchesTitle"
       >
         <DialogHead
-          id="importTitle"
-          title={t('importTitle')}
+          id="searchesTitle"
+          title={t('yourSearches')}
           onClose={() => onOpenChange(false)}
         />
         <div className="flex flex-1 flex-col gap-8 overflow-auto overscroll-contain p-6 max-[720px]:pb-[max(24px,env(safe-area-inset-bottom))] max-[560px]:px-4 max-[560px]:pt-4">
-          <section className="flex flex-col gap-3.5">
-            <p id="importHelp" className="m-0 max-w-[62ch] text-foreground-2">
-              {t('importHelp')}
-            </p>
-            <Textarea
-              ref={input}
-              rows={4}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              spellCheck={false}
-              autoComplete="off"
-              placeholder={t('importPlaceholder')}
-              aria-labelledby="importTitle"
-              aria-describedby="importHelp"
-              className="min-h-[104px] text-[13.5px]"
-            />
-            <ImportOptionsPanel options={options} onChange={onOptions} />
-            <div className="flex items-center gap-2">
-              <Button
-                size="lg"
-                disabled={busy}
-                onClick={() => {
-                  if (!text.trim()) {
-                    input.current?.focus()
-                    return
-                  }
-                  void run(text.trim())
-                }}
-              >
-                <CloudArrowDownIcon aria-hidden="true" />
-                {t('startImport')}
-              </Button>
+          {(running || error) && (
+            <section className="flex flex-col gap-3.5">
+              {error && <JobError message={error} />}
               {running && (
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => void act(() => cancel({ workspace }))}
-                >
-                  {t('cancelImport')}
-                </Button>
+                <>
+                  <JobView job={job} />
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="self-start"
+                    onClick={() => void act(() => cancel({ workspace }))}
+                  >
+                    {t('cancelImport')}
+                  </Button>
+                </>
               )}
-            </div>
-            {error ? <JobError message={error} /> : <JobView job={job} />}
-          </section>
+            </section>
+          )}
           <section
             aria-labelledby="sourcesTitle"
             className="flex flex-col gap-1"
           >
-            <div className="flex min-h-8 items-center justify-between gap-3">
+            <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-3 gap-y-2">
               <h3
                 id="sourcesTitle"
                 className="m-0 text-[15px] font-semibold tracking-[-0.01em]"
               >
                 {t('sourcesTitle')}
               </h3>
-              {list.some((s) => s.url) && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(
-                      list
-                        .map((s) => s.url)
-                        .filter(Boolean)
-                        .join('\n'),
-                    )
-                  }
-                >
-                  <ArrowClockwiseIcon aria-hidden="true" />
-                  {t('reimportAll')}
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {shown && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onShow(null)}
+                  >
+                    {t('showAllSearches')}
+                  </Button>
+                )}
+                {list.some((s) => s.url) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(
+                        list
+                          .map((s) => s.url)
+                          .filter(Boolean)
+                          .join('\n'),
+                      )
+                    }
+                  >
+                    <ArrowClockwiseIcon aria-hidden="true" />
+                    {t('reimportAll')}
+                  </Button>
+                )}
+              </div>
             </div>
             {!list.length ? (
               <p className="mt-1 mb-0 text-muted-foreground">
@@ -268,6 +259,8 @@ export function ImportDialog({
                     ? s.url.replace(/^https?:\/\/(www\.)?/, '')
                     : t('manualSource')
                   const params = (s.paramsText || '').replace(/[\s,]+$/, '')
+                  const isShown = !!s.url && !!shown?.includes(s.url)
+                  const inArea = !!areaSearchOf(areaSearches, s.url)
                   return (
                     <li
                       key={s.key}
@@ -313,9 +306,35 @@ export function ImportDialog({
                               {t('sourceCapped')}
                             </span>
                           ) : null}
+                          {inArea && (
+                            <span className="inline-flex h-5 items-center gap-1 rounded-full bg-muted px-2 text-[11.5px] font-medium shadow-[inset_0_0_0_1px_var(--border)]">
+                              <PolygonIcon
+                                aria-hidden="true"
+                                className="size-3"
+                              />
+                              {t('drawnArea')}
+                            </span>
+                          )}
+                          {isShown && (
+                            <span className="inline-flex h-5 items-center rounded-full bg-primary px-2 text-[11.5px] font-semibold text-primary-foreground">
+                              {t('shownTag')}
+                            </span>
+                          )}
                         </p>
                       </div>
-                      <div className="-mt-1 -mr-1.5 flex flex-none gap-0.5">
+                      <div className="-mt-1 -mr-1.5 flex flex-none items-center gap-0.5">
+                        {s.url && !isShown && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mr-1"
+                            title={t('showSearchTitle')}
+                            aria-label={`${t('showSearch')}: ${name}`}
+                            onClick={() => onShow(s.url)}
+                          >
+                            {t('showSearch')}
+                          </Button>
+                        )}
                         {s.url && (
                           <Button
                             size="icon-sm"

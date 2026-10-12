@@ -8,6 +8,10 @@ import { PROPERTY_TYPES, typeLabel } from '../../shared/vocab'
 import type { Lang } from '../../shared/vocab'
 import type { Place } from '../../shared/types'
 import { listingPlace } from './labels'
+import { insidePolygon } from '../../shared/area'
+import type { DrawnArea } from '../../shared/area'
+
+export type { DrawnArea }
 
 export type RawListing = FunctionReturnType<
   typeof api.listings.page
@@ -136,9 +140,6 @@ export function groupOf(
   return { key: p.key, lat: p.lat, lon: p.lon, place: p }
 }
 
-/** A polygon drawn on the map, as [lat, lon] corners. */
-export type DrawnArea = Array<[number, number]>
-
 /** A saved drawn area, or null when it isn't one (at least three [lat, lon] corners). */
 export function validDrawnArea(v: unknown): DrawnArea | null {
   if (!Array.isArray(v) || v.length < 3) return null
@@ -149,21 +150,6 @@ export function validDrawnArea(v: unknown): DrawnArea | null {
       p.every((x) => typeof x === 'number' && Number.isFinite(x)),
   )
   return ok ? (v as DrawnArea) : null
-}
-
-/** Ray casting (even-odd, like the drawn shape's fill). */
-export function insidePolygon(lat: number, lon: number, poly: DrawnArea) {
-  let inside = false
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [yi, xi] = poly[i]
-    const [yj, xj] = poly[j]
-    if (
-      yi > lat !== yj > lat &&
-      lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi
-    )
-      inside = !inside
-  }
-  return inside
 }
 
 /** Whether the listing's best-known point (its neighbourhood, else its settlement) is in the area. */
@@ -178,6 +164,72 @@ export function inDrawnArea(
 export function matchesPlace(l: Listing, key: string): boolean {
   if (key.startsWith('nb:')) return groupOf(l, 'neighborhood')?.key === key
   return l.place?.key === key
+}
+
+// ---------------------------------------------------------------- the shown search
+
+/** The searches whose listings show, by link: null for every search, none for a clean map. */
+export type Shown = ReadonlyArray<string> | null
+
+/** A saved shown search, or null (every search) when it isn't a list of links. */
+export function validShown(v: unknown): Array<string> | null {
+  return Array.isArray(v) && v.every((x) => typeof x === 'string') ? v : null
+}
+
+/**
+ * The listings of the shown searches: one of a listing's sources is a search whose link is
+ * shown. A link with no source yet (its import just started) matches nothing until it saves.
+ */
+export function shownOf(
+  list: Array<Listing>,
+  sources: ReadonlyArray<Source>,
+  shown: Shown,
+): Array<Listing> {
+  if (!shown) return list
+  const urls = new Set(shown)
+  const keys = new Set(
+    sources.filter((s) => s.url != null && urls.has(s.url)).map((s) => s.key),
+  )
+  if (!keys.size) return []
+  return list.filter((l) => l.sources.some((k) => keys.has(k)))
+}
+
+/** An area search's links (one per place it reaches into) and the area it was drawn as. */
+export interface AreaSearch {
+  urls: Array<string>
+  area: DrawnArea
+}
+
+/** The area searches saved in this browser, without any that aren't one. */
+export function validAreaSearches(v: unknown): Array<AreaSearch> {
+  if (!Array.isArray(v)) return []
+  return v.flatMap((x: unknown) => {
+    const { urls, area } = (x ?? {}) as Partial<
+      Record<keyof AreaSearch, unknown>
+    >
+    const shape = validDrawnArea(area)
+    return shape && validShown(urls)?.length
+      ? [{ urls: urls as Array<string>, area: shape }]
+      : []
+  })
+}
+
+/** Remember an area search: newest first, in place of one that shares a link, at most `max`. */
+export function rememberAreaSearch(
+  list: Array<AreaSearch>,
+  entry: AreaSearch,
+  max = 20,
+): Array<AreaSearch> {
+  const rest = list.filter((s) => !s.urls.some((u) => entry.urls.includes(u)))
+  return [entry, ...rest].slice(0, max)
+}
+
+/** The area search a link was part of, if this browser started it. */
+export function areaSearchOf(
+  list: ReadonlyArray<AreaSearch>,
+  url: string | null,
+): AreaSearch | undefined {
+  return url == null ? undefined : list.find((s) => s.urls.includes(url))
 }
 
 /** The listings the filters pick from: the hidden ones, or all the others. */

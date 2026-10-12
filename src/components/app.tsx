@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useConvex, useQuery } from 'convex/react'
+import { useQuery } from 'convex/react'
 import { ListBulletsIcon, MapTrifoldIcon } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import type { GroupImperativeHandle, Layout } from 'react-resizable-panels'
 import { api } from '../../convex/_generated/api'
 import { cn } from '#/lib/utils'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '#/components/ui/resizable'
 import { AppContext } from './app-context'
 import type { AppContextValue } from './app-context'
 import { Topbar, useMedia } from './topbar'
@@ -14,11 +20,13 @@ import {
   PAGE,
   ResultBar,
   ResultList,
+  SearchingState,
+  StartState,
 } from './results'
 import { BASE_LAYERS, ListingMap } from './listing-map'
 import type { MapHandle } from './listing-map'
 import { DetailDialog } from './detail-dialog'
-import { ImportDialog } from './import-dialog'
+import { SearchesDialog } from './searches-dialog'
 import { SearchDialog } from './search-dialog'
 import { AboutDialog } from './about-dialog'
 import { ShareDialog } from './share-dialog'
@@ -29,20 +37,23 @@ import { makeFormat } from '#/lib/format'
 import { loadJson, saveJson } from '#/lib/storage'
 import { resolveWorkspace } from '#/lib/workspace'
 import { useWorkspaceData } from '#/lib/use-data'
-import { download, toCsv } from '#/lib/csv'
 import {
   DEFAULT_FILTERS,
   applyFilters,
+  areaSearchOf,
   poolOf,
   prepare,
+  rememberAreaSearch,
+  shownOf,
   sortListings,
+  validAreaSearches,
   validDrawnArea,
+  validShown,
   validSort,
 } from '#/lib/listings'
-import type { Filters, GroupMode, Sort } from '#/lib/listings'
+import type { DrawnArea, Filters, GroupMode, Sort } from '#/lib/listings'
 import { DEFAULT_OPTIONS } from '../../shared/importer'
 import type { ImportOptions } from '../../shared/importer'
-import type { StoredDetails } from '../../shared/listing'
 
 interface Prefs {
   lang: Lang
@@ -50,9 +61,12 @@ interface Prefs {
   groupMode: GroupMode
   baseLayer: string
   filters: Filters
+  /** The shown search: the links whose listings show, null for every search's. */
+  shown: Array<string> | null
 }
 
-function initialPrefs(): Prefs {
+/** `switched`: a link opened another workspace, which starts with all of its searches shown. */
+function initialPrefs(switched: boolean): Prefs {
   const saved = loadJson<Partial<Prefs>>('ui', {})
   const lang: Lang =
     saved.lang === 'bg' || saved.lang === 'en'
@@ -74,7 +88,22 @@ function initialPrefs(): Prefs {
       ...saved.filters,
       drawnArea: validDrawnArea(saved.filters?.drawnArea),
     },
+    shown: switched ? null : validShown(saved.shown),
   }
+}
+
+/** Wide screens: the list is `px` wide, by default the width it was last
+ *  dragged to in this browser (at first min(780px, 56%)), and the map takes
+ *  the rest of the window. */
+function paneLayout(px?: number): Layout {
+  const width = window.innerWidth
+  const saved = loadJson<unknown>('listWidth', null)
+  px ??=
+    typeof saved === 'number' && saved > 0
+      ? saved
+      : Math.round(Math.min(780, width * 0.56))
+  const list = Math.min(100, (100 * px) / width)
+  return { 'list-pane': list, 'map-pane': 100 - list }
 }
 
 /** State that outlives a reload, saved a moment after it changes. */
@@ -97,7 +126,7 @@ const NO_STARS: ReadonlySet<string> = new Set()
 export function App() {
   const [ws] = useState(resolveWorkspace)
   const workspace = ws.key
-  const [prefs, setPrefs] = usePersisted('ui', initialPrefs)
+  const [prefs, setPrefs] = usePersisted('ui', () => initialPrefs(ws.switched))
   const [stars, setStars] = usePersisted(
     'stars',
     () => new Set(loadJson<Array<string>>('stars', [])),
@@ -118,10 +147,16 @@ export function App() {
       ...loadJson<Partial<ImportOptions>>('importOptions', {}),
     }),
   )
+  // The area searches started here, so showing one again shows all its links and its area.
+  const [areaSearches, setAreaSearches] = usePersisted('areaSearches', () =>
+    validAreaSearches(loadJson('areaSearches', [])),
+  )
+  // The import a search just started, until `job` is that one: its listings are on their way.
+  const [startedJob, setStartedJob] = useState<string | null>(null)
   const [view, setView] = useState<'list' | 'map'>('list')
   const [detailId, setDetailId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<
-    null | 'import' | 'search' | 'about' | 'share'
+    null | 'searches' | 'searchArea' | 'searchPlace' | 'about' | 'share'
   >(null)
   const [limit, setLimit] = useState(PAGE)
   const mapRef = useRef<MapHandle>(null)
@@ -130,7 +165,8 @@ export function App() {
   const scroll = useRef<HTMLDivElement>(null)
   const toolbar = useRef<HTMLDivElement>(null)
   const narrow = useMedia('(max-width: 1000px)')
-  const convex = useConvex()
+  const panes = useRef<GroupImperativeHandle>(null)
+  const [initialPanes] = useState(paneLayout)
 
   const lang = prefs.lang
   const t = useCallback(
@@ -154,10 +190,16 @@ export function App() {
     () => (raw ? raw.map((l) => prepare(l, sourceMap)) : null),
     [raw, sourceMap],
   )
+  // The shown search comes first: the filters, counts and map work on its listings.
+  const shown = prefs.shown
+  const scoped = useMemo(
+    () => (all ? shownOf(all, sources, shown) : null),
+    [all, sources, shown],
+  )
   const onlyHidden = prefs.filters.hidden
   const pool = useMemo(
-    () => (all ? poolOf(all, hidden, onlyHidden) : null),
-    [all, hidden, onlyHidden],
+    () => (scoped ? poolOf(scoped, hidden, onlyHidden) : null),
+    [scoped, hidden, onlyHidden],
   )
   const starsForFilter = prefs.filters.starred ? stars : NO_STARS
   const filtered = useMemo(
@@ -172,25 +214,49 @@ export function App() {
     [pool, prefs.filters, starsForFilter, prefs.sort, lang],
   )
   const multiDeal = useMemo(
-    () => new Set((all ?? []).map((l) => l.deal)).size > 1,
-    [all],
+    () => new Set((scoped ?? []).map((l) => l.deal)).size > 1,
+    [scoped],
   )
   const hasHoods = useMemo(
-    () => (all ?? []).some((l) => l.nbhd?.lat != null),
-    [all],
+    () => (scoped ?? []).some((l) => l.nbhd?.lat != null),
+    [scoped],
   )
   const starCount = useMemo(
     () => (pool ?? []).reduce((n, l) => n + (stars.has(l.id) ? 1 : 0), 0),
     [pool, stars],
   )
   const hiddenCount = useMemo(
-    () => (all ?? []).reduce((n, l) => n + (hidden.has(l.id) ? 1 : 0), 0),
+    () => (scoped ?? []).reduce((n, l) => n + (hidden.has(l.id) ? 1 : 0), 0),
+    [scoped, hidden],
+  )
+  // What "Show earlier searches" brings back.
+  const earlier = useMemo(
+    () => (all ?? []).reduce((n, l) => n + (hidden.has(l.id) ? 0 : 1), 0),
     [all, hidden],
   )
+  // Nothing in the shown search: an area drawn now is drawn to be searched.
+  const clean = scoped?.length === 0
+  const hasToolbar = !!scoped && !clean
+  // The shown search's import, while nothing of it has arrived.
+  const scopeJob =
+    shown?.length && job?.inputs.some((i) => shown.includes(i.input))
+      ? job
+      : null
+  const searching =
+    !!shown?.length && clean && (startedJob != null || jobRunning(scopeJob))
+
+  useEffect(() => {
+    if (job && job.id === startedJob) setStartedJob(null)
+  }, [job, startedJob])
 
   useEffect(() => {
     if (Date.now() - fitRequested.current < 5000) mapRef.current?.fit()
   }, [all])
+
+  // Another search shown: fit the map to it (the map fits by itself to listings that arrive later).
+  useEffect(() => {
+    mapRef.current?.fit()
+  }, [shown])
 
   useEffect(() => {
     document.documentElement.lang = lang
@@ -279,6 +345,31 @@ export function App() {
     [setPrefs],
   )
   const onQuery = useCallback((q: string) => setFilters({ q }), [setFilters])
+
+  /** Show these searches' listings (null: every search's), in the area they were drawn as. */
+  const showSearch = useCallback(
+    (urls: Array<string> | null, drawnArea: DrawnArea | null = null) => {
+      setPrefs((p) => ({
+        ...p,
+        shown: urls,
+        filters: { ...p.filters, drawnArea },
+      }))
+      setLimit(PAGE)
+      scroll.current?.scrollTo({ top: 0 })
+    },
+    [setPrefs],
+  )
+  const drawToSearch = () => {
+    if (narrow) setView('map')
+    mapRef.current?.startDrawing()
+  }
+  // A clean map, the filters as they start (the sort stays), and the pen down.
+  const newSearch = () => {
+    setPrefs((p) => ({ ...p, shown: [], filters: DEFAULT_FILTERS }))
+    setLimit(PAGE)
+    scroll.current?.scrollTo({ top: 0 })
+    drawToSearch()
+  }
   const onMore = useCallback(
     () => setLimit((n) => (n < filtered.length ? n + PAGE : n)),
     [filtered.length],
@@ -300,51 +391,31 @@ export function App() {
     )
     ro.observe(el)
     return () => ro.disconnect()
-  }, [all])
+  }, [hasToolbar])
+
+  // Wide again: the list gets back the width a narrow screen squeezed.
+  useEffect(() => {
+    if (!narrow) panes.current?.setLayout(paneLayout())
+  }, [narrow])
 
   const detailIndex = detailId
     ? filtered.findIndex((l) => l.id === detailId)
     : -1
   const detail = detailId ? (all?.find((l) => l.id === detailId) ?? null) : null
 
-  const exportCsv = async () => {
-    const id = toast.loading(t('csvPreparing'))
-    try {
-      const details = new Map<string, StoredDetails>()
-      for (let k = 0; k < filtered.length; k += 200) {
-        const rows = await convex.query(api.listings.detailsMany, {
-          workspace,
-          imotIds: filtered.slice(k, k + 200).map((l) => l.id),
-        })
-        for (const d of rows) details.set(d.imotId, d)
-      }
-      const csv = toCsv(
-        filtered.map((l) => ({
-          l,
-          d: details.get(l.id) ?? null,
-          starred: stars.has(l.id),
-          note: notes[l.id],
-        })),
-      )
-      download(
-        csv,
-        `imot-listings-${new Date().toISOString().slice(0, 10)}.csv`,
-      )
-      toast.dismiss(id)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err), { id })
-    }
-  }
-
-  const empty = all
-    ? filtered.length === 0
-      ? all.length === 0
-        ? 'none'
-        : 'filtered'
-      : null
-    : error
+  const empty = !all
+    ? error
       ? 'error'
       : null
+    : searching
+      ? 'searching'
+      : clean
+        ? shown?.length
+          ? 'nothing'
+          : 'start'
+        : filtered.length === 0
+          ? 'filtered'
+          : null
 
   return (
     <AppContext.Provider value={ctx}>
@@ -353,132 +424,197 @@ export function App() {
           query={prefs.filters.q}
           onQuery={onQuery}
           busy={jobRunning(job)}
-          onSearchImot={() => setDialog('search')}
-          onImport={() => setDialog('import')}
-          onCsv={() => void exportCsv()}
+          onNewSearch={newSearch}
+          onSearches={() => setDialog('searches')}
           onToggleLang={() =>
             setPrefs((p) => ({ ...p, lang: p.lang === 'bg' ? 'en' : 'bg' }))
           }
           onShare={() => setDialog('share')}
           onAbout={() => setDialog('about')}
         />
-        <main className="relative min-h-0 flex-1 min-[1001px]:grid min-[1001px]:grid-cols-[minmax(440px,min(780px,56%))_minmax(0,1fr)]">
-          <section
-            aria-labelledby="count"
-            className={cn(
-              '@container flex min-h-0 flex-col bg-background max-[1000px]:absolute max-[1000px]:inset-0 min-[1001px]:relative min-[1001px]:border-r',
-              narrow && view === 'map' && 'invisible z-[2]',
-            )}
+        <main className="relative min-h-0 flex-1">
+          {/* One tree on every screen, so the map is never re-created: narrow
+              screens stack both panes over <main> and hide the handle. The
+              library makes the panes pan-y only (no pinch-zoom); the handle
+              alone needs that, and gets touch-none. */}
+          <ResizablePanelGroup
+            groupRef={panes}
+            defaultLayout={initialPanes}
+            onLayoutChanged={(layout, { isUserInteraction }) => {
+              const px = (layout['list-pane'] * window.innerWidth) / 100
+              if (isUserInteraction) saveJson('listWidth', Math.round(px))
+              // Whole pixels: map tiles at a fractional offset show seams.
+              if (!narrow && Math.abs(px - Math.round(px)) > 0.05)
+                panes.current?.setLayout(paneLayout(Math.round(px)))
+            }}
+            disabled={narrow}
+            className="touch-auto!"
           >
-            <a
-              href="#map"
-              className="absolute top-2 left-5 z-[5] -translate-y-[160%] rounded-full bg-primary px-3.5 py-2 font-semibold text-primary-foreground no-underline focus-visible:translate-y-0"
-              onClick={(e) => {
-                e.preventDefault()
-                setView('map')
-                document.getElementById('map')?.focus()
-              }}
+            <ResizablePanel
+              id="list-pane"
+              minSize="400px"
+              groupResizeBehavior="preserve-pixel-size"
+              className="touch-auto!"
             >
-              {t('skipToMap')}
-            </a>
-            {all && all.length > 0 && (
-              <div
-                ref={toolbar}
+              <section
+                aria-labelledby="count"
                 className={cn(
-                  'relative flex-none border-b px-5 pt-3.5 pb-3 max-[720px]:px-0 max-[720px]:py-2.5',
-                  narrow && view === 'map' && 'visible bg-background',
+                  '@container flex min-h-0 flex-col bg-background max-[1000px]:absolute max-[1000px]:inset-0 min-[1001px]:relative min-[1001px]:h-full',
+                  narrow && view === 'map' && 'invisible z-[2]',
                 )}
               >
-                <FilterBar
-                  all={all}
-                  pool={pool ?? all}
-                  filters={prefs.filters}
-                  onChange={setFilters}
-                  starCount={starCount}
-                  hiddenCount={hiddenCount}
-                />
-              </div>
-            )}
-            <div
-              ref={scroll}
-              className="min-h-0 flex-1 scroll-pt-3 overflow-auto overscroll-contain"
-            >
-              <span id="count" className="sr-only">
-                {all
-                  ? t('listingsCount', { n: fmt.num(all.length) })
-                  : t('appTitle')}
-              </span>
-              {pool && (
-                <ResultBar
-                  total={pool.length}
-                  shown={filtered.length}
-                  onlyHidden={onlyHidden}
-                  sort={prefs.sort}
-                  onSort={(sort) => setPrefs((p) => ({ ...p, sort }))}
-                />
-              )}
-              {!all && !error && <ListSkeleton />}
-              {all && filtered.length > 0 && (
-                <ResultList
-                  rows={filtered}
-                  total={filtered.length}
-                  limit={limit}
-                  onMore={onMore}
-                  multiDeal={multiDeal}
-                  onOpen={setDetailId}
-                  onHover={onHover}
-                  scrollRoot={scroll}
-                />
-              )}
-              {empty && (
-                <EmptyState
-                  kind={empty}
-                  message={error ?? undefined}
-                  onSearch={() => setDialog('search')}
-                  onImport={() => setDialog('import')}
-                  onClear={() => setFilters({ ...DEFAULT_FILTERS, q: '' })}
-                />
-              )}
-            </div>
-          </section>
-          <section
-            id="map"
-            tabIndex={-1}
-            aria-label={t('viewMap')}
-            className={cn(
-              'relative isolate min-h-0 bg-muted outline-none max-[1000px]:absolute max-[1000px]:inset-0',
-              narrow && view !== 'map' && 'invisible',
-              narrow &&
-                view === 'map' &&
-                'map-raised max-[1000px]:top-[var(--toolbar-h,0px)]',
-            )}
-          >
-            <ListingMap
-              ref={mapRef}
-              filtered={filtered}
-              hasHoods={hasHoods}
-              groupMode={prefs.groupMode}
-              baseLayer={prefs.baseLayer}
-              selectedPlace={prefs.filters.place}
-              unmappedActive={prefs.filters.unmapped}
-              drawnArea={prefs.filters.drawnArea}
-              onOpen={setDetailId}
-              onFilterPlace={(place) => {
-                setFilters({ place })
-                setView('list')
+                <a
+                  href="#map"
+                  className="absolute top-2 left-5 z-[5] -translate-y-[160%] rounded-full bg-primary px-3.5 py-2 font-semibold text-primary-foreground no-underline focus-visible:translate-y-0"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setView('map')
+                    document.getElementById('map')?.focus()
+                  }}
+                >
+                  {t('skipToMap')}
+                </a>
+                {hasToolbar && (
+                  <div
+                    ref={toolbar}
+                    className={cn(
+                      'relative flex-none border-b px-5 pt-3.5 pb-3 max-[720px]:px-0 max-[720px]:py-2.5',
+                      narrow && view === 'map' && 'visible bg-background',
+                    )}
+                  >
+                    <FilterBar
+                      all={scoped}
+                      pool={pool ?? scoped}
+                      filters={prefs.filters}
+                      onChange={setFilters}
+                      starCount={starCount}
+                      hiddenCount={hiddenCount}
+                    />
+                  </div>
+                )}
+                <div
+                  ref={scroll}
+                  className="min-h-0 flex-1 scroll-pt-3 overflow-auto overscroll-contain"
+                >
+                  <span id="count" className="sr-only">
+                    {scoped
+                      ? t('listingsCount', { n: fmt.num(scoped.length) })
+                      : t('appTitle')}
+                  </span>
+                  {pool && (
+                    <ResultBar
+                      total={pool.length}
+                      shown={filtered.length}
+                      onlyHidden={onlyHidden}
+                      sort={prefs.sort}
+                      onSort={(sort) => setPrefs((p) => ({ ...p, sort }))}
+                      onShowAll={shown?.length ? () => showSearch(null) : null}
+                    />
+                  )}
+                  {!all && !error && <ListSkeleton />}
+                  {all && filtered.length > 0 && (
+                    <ResultList
+                      rows={filtered}
+                      total={filtered.length}
+                      limit={limit}
+                      onMore={onMore}
+                      multiDeal={multiDeal}
+                      onOpen={setDetailId}
+                      onHover={onHover}
+                      scrollRoot={scroll}
+                    />
+                  )}
+                  {empty === 'searching' && (
+                    <SearchingState
+                      job={jobRunning(scopeJob) ? scopeJob : null}
+                    />
+                  )}
+                  {(empty === 'start' || empty === 'nothing') && (
+                    <StartState
+                      nothing={empty === 'nothing'}
+                      earlier={earlier}
+                      onDraw={drawToSearch}
+                      onSearchPlace={() => setDialog('searchPlace')}
+                      onShowAll={() => showSearch(null)}
+                    />
+                  )}
+                  {(empty === 'error' || empty === 'filtered') && (
+                    <EmptyState
+                      kind={empty}
+                      message={error ?? undefined}
+                      onClear={() => setFilters({ ...DEFAULT_FILTERS, q: '' })}
+                    />
+                  )}
+                </div>
+              </section>
+            </ResizablePanel>
+            <ResizableHandle
+              withHandle
+              aria-label={t('resizePanes')}
+              onDoubleClick={() => {
+                saveJson('listWidth', null)
+                panes.current?.setLayout(paneLayout())
               }}
-              onToggleUnmapped={() =>
-                setFilters({ unmapped: !prefs.filters.unmapped })
-              }
-              onDrawnArea={(drawnArea) => setFilters({ drawnArea })}
-              onBaseLayer={(baseLayer) =>
-                setPrefs((p) => ({ ...p, baseLayer }))
-              }
-              onGroupMode={(groupMode) =>
-                setPrefs((p) => ({ ...p, groupMode }))
-              }
+              // No width of its own, so the panes stay whole pixels: the line
+              // is the list's last pixel, as its border was.
+              className={cn(
+                'z-10 w-0 touch-none after:w-2.5 max-[1000px]:hidden pointer-coarse:after:w-5',
+                'before:absolute before:inset-y-0 before:right-0 before:w-px before:bg-border data-[separator=active]:before:-right-px data-[separator=active]:before:w-0.5 data-[separator=active]:before:bg-border-strong data-[separator=hover]:before:-right-px data-[separator=hover]:before:w-0.5 data-[separator=hover]:before:bg-border-strong',
+                '*:h-8 *:w-1.5 *:bg-muted-foreground/60 *:opacity-0 *:transition-opacity focus-visible:*:bg-ring focus-visible:*:opacity-100 data-[separator=active]:*:opacity-100 data-[separator=hover]:*:opacity-100',
+              )}
             />
-          </section>
+            <ResizablePanel
+              id="map-pane"
+              minSize="420px"
+              className="touch-auto!"
+            >
+              <section
+                id="map"
+                tabIndex={-1}
+                aria-label={t('viewMap')}
+                className={cn(
+                  'relative isolate min-h-0 bg-muted outline-none max-[1000px]:absolute max-[1000px]:inset-0 min-[1001px]:h-full',
+                  narrow && view !== 'map' && 'invisible',
+                  narrow &&
+                    view === 'map' &&
+                    'map-raised max-[1000px]:top-[var(--toolbar-h,0px)]',
+                )}
+              >
+                <ListingMap
+                  ref={mapRef}
+                  filtered={filtered}
+                  hasHoods={hasHoods}
+                  groupMode={prefs.groupMode}
+                  baseLayer={prefs.baseLayer}
+                  selectedPlace={prefs.filters.place}
+                  unmappedActive={prefs.filters.unmapped}
+                  drawnArea={prefs.filters.drawnArea}
+                  clean={clean}
+                  onOpen={setDetailId}
+                  onFilterPlace={(place) => {
+                    setFilters({ place })
+                    setView('list')
+                  }}
+                  onToggleUnmapped={() =>
+                    setFilters({ unmapped: !prefs.filters.unmapped })
+                  }
+                  onDrawnArea={(drawnArea) => {
+                    setFilters({ drawnArea })
+                    // Drawn on a clean map: to be searched.
+                    if (drawnArea && clean) setDialog('searchArea')
+                  }}
+                  onSearchArea={() => setDialog('searchArea')}
+                  onSearchPlace={() => setDialog('searchPlace')}
+                  onBaseLayer={(baseLayer) =>
+                    setPrefs((p) => ({ ...p, baseLayer }))
+                  }
+                  onGroupMode={(groupMode) =>
+                    setPrefs((p) => ({ ...p, groupMode }))
+                  }
+                />
+              </section>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </main>
         {narrow && (
           <button
@@ -523,19 +659,29 @@ export function App() {
           mapRef.current?.showOnMap(l)
         }}
       />
-      <ImportDialog
-        open={dialog === 'import'}
-        onOpenChange={(o) => setDialog(o ? 'import' : null)}
+      <SearchesDialog
+        open={dialog === 'searches'}
+        onOpenChange={(o) => setDialog(o ? 'searches' : null)}
         job={job}
         options={options}
-        onOptions={setOptions}
         sources={sources}
         all={all}
         deleting={deleting}
+        shown={shown}
+        areaSearches={areaSearches}
+        onShow={(url) => {
+          const group = areaSearchOf(areaSearches, url)
+          if (url == null) showSearch(null)
+          else showSearch(group?.urls ?? [url], group?.area)
+          setDialog(null)
+          setView('list')
+        }}
       />
       <SearchDialog
-        open={dialog === 'search'}
-        onOpenChange={(o) => setDialog(o ? 'search' : null)}
+        open={dialog === 'searchArea' || dialog === 'searchPlace'}
+        onOpenChange={(o) => !o && setDialog(null)}
+        area={prefs.filters.drawnArea}
+        start={dialog === 'searchPlace' ? 'place' : 'area'}
         job={job}
         options={options}
         onOptions={setOptions}
@@ -543,6 +689,12 @@ export function App() {
           setView('list')
           mapRef.current?.fit()
           fitRequested.current = Date.now()
+        }}
+        onStarted={({ urls, area, job: id }) => {
+          setStartedJob(id)
+          if (area)
+            setAreaSearches((list) => rememberAreaSearch(list, { urls, area }))
+          showSearch(urls, area)
         }}
       />
       <AboutDialog

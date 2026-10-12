@@ -4,6 +4,7 @@ import type * as Leaflet from 'leaflet'
 import {
   CornersOutIcon,
   GpsSlashIcon,
+  ListMagnifyingGlassIcon,
   PolygonIcon,
   StackIcon,
   XIcon,
@@ -21,7 +22,14 @@ import {
   rampColor,
 } from '#/lib/listings'
 import type { DrawnArea, Group, GroupMode, Listing } from '#/lib/listings'
-import { KIND_EN, hoodName, oblastLabel, placeName } from '#/lib/labels'
+import {
+  KIND_EN,
+  floorText,
+  hoodName,
+  oblastLabel,
+  placeName,
+  yearText,
+} from '#/lib/labels'
 import { thumbFor } from '#/lib/urls'
 import { cn } from '#/lib/utils'
 import { transliterate } from '../../shared/text'
@@ -141,23 +149,34 @@ function popupHtml(
     fmt,
     lang,
     hidden,
-  }: Pick<AppContextValue, 't' | 'fmt' | 'lang' | 'hidden'>,
+    stars,
+  }: Pick<AppContextValue, 't' | 'fmt' | 'lang' | 'hidden' | 'stars'>,
 ) {
   const items = [...g.items].sort(
     (a, b) => (a.eur ?? Infinity) - (b.eur ?? Infinity),
   )
-  const shown = items.slice(0, 8)
+  const shown = items.slice(0, 10)
   const rows = shown
     .map((l) => {
-      const size = [
+      const floor = floorText(l, lang)
+      const year = yearText(l)
+      const facts = [
         l.area ? `${fmt.num(l.area)} ${t('sqm')}` : '',
         l.yard ? t('yardFact', { v: fmt.num(l.yard) }) : '',
+        floor ? t('floorFact', { v: floor }) : '',
+        year ? t('builtFact', { v: year }) : '',
       ]
         .filter(Boolean)
         .join(', ')
+      // As in the list: a neighbourhood is named only on a settlement marker, and not when it is the place itself.
+      const hood = l.nbhd?.name || l.neighborhood
+      const where =
+        !g.hood && hood && l.place?.via !== 'neighborhood'
+          ? hoodName(hood, lang)
+          : ''
       const thumb = thumbFor(l)
       const img = thumb
-        ? `<img loading="lazy" src="${esc(thumb)}" alt="" width="52" height="39">`
+        ? `<img loading="lazy" src="${esc(thumb)}" alt="" width="84" height="63">`
         : '<span class="pop-nophoto" aria-hidden="true"></span>'
       const price =
         l.price != null
@@ -165,8 +184,22 @@ function popupHtml(
           : l.priceOnRequest
             ? t('priceOnRequest')
             : ''
+      const ppm = l.ppm
+        ? `<span class="pop-ppm">${esc(fmt.money(l.ppm))}/${esc(t('sqm'))}</span>`
+        : ''
+      const badges = [
+        l.fresh
+          ? `<span class="pop-tag pop-tag-new">${esc(t('badgeNew'))}</span>`
+          : '',
+        l.stale
+          ? `<span class="pop-tag pop-tag-stale">${esc(t('badgeStaleShort'))}</span>`
+          : '',
+        stars.has(l.id)
+          ? `<span class="pop-star"><span aria-hidden="true">★</span><span class="sr-only">${esc(t('pillStarred'))}</span></span>`
+          : '',
+      ].join('')
       const hide = hidden.has(l.id) ? 'unhide' : 'hide'
-      return `<li><button type="button" class="pop-row" data-open="${esc(l.id)}">${img}<span class="pop-desc">${esc(typeLabel(l.type ?? 'other', l.typeBg, lang, true))}<br><span class="muted">${esc(size)}</span></span><b>${esc(price)}</b></button><button type="button" class="pop-hide" data-hide="${esc(l.id)}" aria-pressed="${hide === 'unhide'}" title="${esc(t(hide))}" aria-label="${esc(t(hide))}">${svgIcon(ICON_PATHS[hide])}</button></li>`
+      return `<li><button type="button" class="pop-row${l.stale ? ' pop-stale' : ''}" data-open="${esc(l.id)}">${img}<span class="pop-desc"><span class="pop-kind">${esc(typeLabel(l.type ?? 'other', l.typeBg, lang, true))}${badges}</span>${facts ? `<span class="muted">${esc(facts)}</span>` : ''}${where ? `<span class="muted">${esc(where)}</span>` : ''}</span><span class="pop-price"><b>${esc(price)}</b>${ppm}</span></button><button type="button" class="pop-hide" data-hide="${esc(l.id)}" aria-pressed="${hide === 'unhide'}" title="${esc(t(hide))}" aria-label="${esc(t(hide))}">${svgIcon(ICON_PATHS[hide])}</button></li>`
     })
     .join('')
   const more =
@@ -192,6 +225,8 @@ export interface MapHandle {
   highlight: (id: string, on: boolean) => void
   showOnMap: (l: Listing) => void
   fit: () => void
+  /** Draw an area, as the map's polygon button does. */
+  startDrawing: () => void
 }
 
 interface MapState {
@@ -211,10 +246,13 @@ export function ListingMap({
   selectedPlace,
   unmappedActive,
   drawnArea,
+  clean,
   onOpen,
   onFilterPlace,
   onToggleUnmapped,
   onDrawnArea,
+  onSearchArea,
+  onSearchPlace,
   onBaseLayer,
   onGroupMode,
 }: {
@@ -226,15 +264,21 @@ export function ListingMap({
   selectedPlace: string
   unmappedActive: boolean
   drawnArea: DrawnArea | null
+  /** No listings shown (a new search): an area is drawn to be searched. */
+  clean: boolean
   onOpen: (id: string) => void
   onFilterPlace: (key: string) => void
   onToggleUnmapped: () => void
   onDrawnArea: (area: DrawnArea | null) => void
+  /** Search imot.bg inside the drawn area. */
+  onSearchArea: () => void
+  /** Search imot.bg in a place instead of drawing. */
+  onSearchPlace: () => void
   onBaseLayer: (key: string) => void
   onGroupMode: (mode: GroupMode) => void
 }) {
   const app = useApp()
-  const { t, fmt, lang, hidden, toggleHidden } = app
+  const { t, fmt, lang, hidden, stars, toggleHidden } = app
   const box = useRef<HTMLDivElement>(null)
   const [state, setState] = useState<MapState | null>(null)
   const [drawing, setDrawing] = useState(false)
@@ -366,6 +410,8 @@ export function ListingMap({
     const { L, map, layer } = state
     const { list, unmapped } = computeGroups(filtered, groupMode)
     groups.current = list
+    // Never wider than the screen: 20 px clear on the left, 70 on the right (the map's buttons).
+    const room = window.innerWidth - 90
     const breaks = ppmBreaks(list)
     const reopen = openKey.current
     const scrollTop =
@@ -393,12 +439,12 @@ export function ListingMap({
         alt: title,
         riseOnHover: true,
       })
-      // Clearance so the popup isn't tucked under the map buttons.
-      m.bindPopup(() => popupHtml(g, { t, fmt, lang, hidden }), {
-        maxWidth: 340,
-        minWidth: 280,
+      // Clearance so the popup isn't tucked under the map buttons, or the legend below it.
+      m.bindPopup(() => popupHtml(g, { t, fmt, lang, hidden, stars }), {
+        maxWidth: Math.min(420, room),
+        minWidth: Math.min(360, room),
         autoPanPaddingTopLeft: [20, 20],
-        autoPanPaddingBottomRight: [70, 20],
+        autoPanPaddingBottomRight: [70, 100],
         closeButton: true,
       })
       m.addTo(layer)
@@ -428,7 +474,7 @@ export function ListingMap({
       }
     } else map.closePopup()
     refocus.current = null
-  }, [state, filtered, groupMode, selectedPlace, lang, t, fmt, hidden])
+  }, [state, filtered, groupMode, selectedPlace, lang, t, fmt, hidden, stars])
 
   // The drawn area, under the markers.
   useEffect(() => {
@@ -552,6 +598,9 @@ export function ListingMap({
       fit() {
         if (state) fitTo(state, groups.current)
       },
+      startDrawing() {
+        setDrawing(true)
+      },
     }),
     [filtered, state],
   )
@@ -584,6 +633,7 @@ export function ListingMap({
             onToggleUnmapped={onToggleUnmapped}
             hasArea={!!drawnArea}
             onClearArea={() => onDrawnArea(null)}
+            onSearchArea={onSearchArea}
           />,
           state.legend,
         )}
@@ -593,13 +643,26 @@ export function ListingMap({
             role="status"
             className="pointer-events-auto flex max-w-[460px] animate-in items-center gap-3 rounded-2xl bg-background py-2 pr-2 pl-4 text-foreground shadow-[var(--shadow-float)] fade-in-0 slide-in-from-top-2"
           >
-            <div className="flex min-w-0 flex-col">
+            <div className="flex min-w-0 flex-col items-start">
               <span className="text-[13.5px] font-semibold">
-                {t('drawHint')}
+                {t(clean ? 'drawSearchHint' : 'drawHint')}
               </span>
-              <span className="text-[12px] text-muted-foreground">
-                {t('drawNote')}
-              </span>
+              {clean ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawing(false)
+                    onSearchPlace()
+                  }}
+                  className="cursor-pointer rounded border-0 bg-transparent p-0 text-left text-[12.5px] font-medium text-foreground-2 underline decoration-border-strong underline-offset-2 hover:text-foreground hover:decoration-current"
+                >
+                  {t('searchPlaceInstead')}
+                </button>
+              ) : (
+                <span className="text-[12px] text-muted-foreground">
+                  {t('drawNote')}
+                </span>
+              )}
             </div>
             <button
               type="button"
@@ -800,6 +863,7 @@ function MapLegend({
   onToggleUnmapped,
   hasArea,
   onClearArea,
+  onSearchArea,
 }: {
   breaks: Array<number>
   noData: boolean
@@ -808,21 +872,37 @@ function MapLegend({
   onToggleUnmapped: () => void
   hasArea: boolean
   onClearArea: () => void
+  onSearchArea: () => void
 }) {
   const { t, fmt } = useApp()
   const bins = breaks.length + 1
   return (
     <div className="flex flex-col items-start">
       {hasArea && (
-        <button
-          type="button"
-          title={t('clearDrawnArea')}
-          onClick={onClearArea}
-          className="mb-2 inline-flex h-[34px] cursor-pointer items-center gap-2 rounded-full border-0 bg-primary pr-3.5 pl-3 text-[12.5px] font-medium whitespace-nowrap text-primary-foreground shadow-[var(--shadow-float)] hover:bg-primary/90"
-        >
-          <XIcon aria-hidden="true" className="size-4" />
-          <span>{t('clearDrawnArea')}</span>
-        </button>
+        <div className="mb-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            title={t('searchAreaTitle')}
+            onClick={onSearchArea}
+            className="inline-flex h-[34px] cursor-pointer items-center gap-2 rounded-full border-0 bg-primary pr-3.5 pl-3 text-[12.5px] font-medium whitespace-nowrap text-primary-foreground shadow-[var(--shadow-float)] hover:bg-primary/90"
+          >
+            <ListMagnifyingGlassIcon aria-hidden="true" className="size-4" />
+            <span>{t('searchArea')}</span>
+          </button>
+          <button
+            type="button"
+            title={t('clearDrawnArea')}
+            onClick={onClearArea}
+            className="inline-flex h-[34px] cursor-pointer items-center gap-2 rounded-full border-0 bg-background pr-3.5 pl-3 text-[12.5px] font-medium whitespace-nowrap text-foreground shadow-[var(--shadow-float)] hover:bg-muted max-[720px]:w-[34px] max-[720px]:justify-center max-[720px]:px-0"
+          >
+            <XIcon
+              aria-hidden="true"
+              className="size-4 text-muted-foreground"
+            />
+            {/* Phones keep the map clear: just the ×. */}
+            <span className="max-[720px]:sr-only">{t('clearDrawnArea')}</span>
+          </button>
+        </div>
       )}
       {(unmapped > 0 || unmappedActive) && (
         <button

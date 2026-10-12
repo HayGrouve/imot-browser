@@ -21,6 +21,7 @@ import {
   MAX_LISTINGS,
   NBHD_VERSION,
   locateOffline,
+  lookupHood,
   lookupKey,
   mergeDetail,
   splitRange,
@@ -38,7 +39,7 @@ import {
 } from '../shared/parse'
 import type { SearchPage } from '../shared/parse'
 import {
-  geocodeNeighborhood,
+  NOMINATIM_UA,
   geocodeSettlement,
   nominatimUrl,
   parseNominatim,
@@ -50,8 +51,6 @@ import gazetteerData from '../shared/gazetteer-bg.json'
 /** Each step hands over to a fresh run of itself after this long. */
 const BUDGET_MS = 7 * 60_000
 const DETAIL_BATCH = 12
-const NOMINATIM_UA =
-  'onova-za-imotite/1.0 (+https://github.com/HayGrouve/onova-za-imotite)'
 
 let gazetteer: Gazetteer | null = null
 const gaz = () =>
@@ -702,10 +701,12 @@ export const runGeocode = internalAction({
         }
         for (const list of hoods.values()) {
           const t = list[0]
-          const found = await geocodeNeighborhood(
+          const found = await lookupHood(
+            gaz(),
             search,
             t.neighborhood ?? '',
             t.settlement ?? '',
+            t.oblast,
             t.place,
           )
           const nbhd: Nbhd = found

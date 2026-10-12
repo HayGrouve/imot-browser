@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAction, useMutation } from 'convex/react'
 import {
   ArrowClockwiseIcon,
@@ -33,7 +33,7 @@ import {
 } from '#/components/ui/collapsible'
 import { cn } from '#/lib/utils'
 import { errorCode, errorText, useApp } from './app-context'
-import { DIALOG, DialogHead } from './import-dialog'
+import { DIALOG, DialogHead } from './searches-dialog'
 import { Segmented } from './filter-bar'
 import { ImportOptionsPanel, JobView, jobRunning } from './job-view'
 import type { Job } from './job-view'
@@ -51,6 +51,8 @@ import {
   sectionsFor,
 } from '#/lib/search-query'
 import type { SearchQueryState } from '#/lib/search-query'
+import { MAX_AREA_SEARCHES, planArea } from '../../shared/area'
+import type { AreaPlan, DistrictsData, DrawnArea } from '../../shared/area'
 import { adaptQuery } from '../../shared/searchform'
 import type {
   ExtraSection,
@@ -64,6 +66,16 @@ import type { ImportOptions } from '../../shared/importer'
 
 type Note = { text: string; error?: boolean } | null
 
+/** Where the search looks: inside the area drawn on the map, or in a place picked from imot.bg's list. */
+type Where = 'area' | 'place'
+
+/** A search link the dialog started, with the place it covers (an area makes several). */
+interface Link {
+  url: string
+  location: string
+  districts: number
+}
+
 export function SearchDialog({
   open,
   onOpenChange,
@@ -71,6 +83,9 @@ export function SearchDialog({
   options,
   onOptions,
   onShowListings,
+  onStarted,
+  area,
+  start,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -78,20 +93,33 @@ export function SearchDialog({
   options: ImportOptions
   onOptions: (o: ImportOptions) => void
   onShowListings: () => void
+  /** A search started: its links, the area it searched (null for a place) and its import. */
+  onStarted: (search: {
+    urls: Array<string>
+    area: DrawnArea | null
+    job: string
+  }) => void
+  /** The area drawn on the map, if any. */
+  area: DrawnArea | null
+  /** Where the search looks when the dialog opens. */
+  start: Where
 }) {
   const { t, workspace } = useApp()
   const getForm = useAction(api.searchForm.get)
   const startSearch = useAction(api.searchForm.startSearch)
+  const startAreaSearch = useAction(api.searchForm.startAreaSearch)
   const cancel = useMutation(api.imports.cancel)
   const [sq, setSq] = useState<SearchQueryState>(() =>
     sanitizeQuery(loadJson('searchQuery', {})),
   )
+  const [where, setWhere] = useState<Where>(start)
+  const [areaData, setAreaData] = useState<DistrictsData | null>(null)
   const [form, setForm] = useState<SearchForm | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [note, setNote] = useState<Note>(null)
   const [view, setView] = useState<'form' | 'job'>('form')
-  const [url, setUrl] = useState<string | null>(null)
+  const [links, setLinks] = useState<Array<Link>>([])
   const [busy, setBusy] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [invalid, setInvalid] = useState<string | null>(null)
@@ -101,8 +129,25 @@ export function SearchDialog({
   const latest = useRef({ form, sq })
   latest.current = { form, sq }
   const running = jobRunning(job)
+  const inArea = !!area && where === 'area'
+  const plan = useMemo(
+    () => (area && areaData ? planArea(area, areaData) : null),
+    [area, areaData],
+  )
+  const planOk =
+    !!plan &&
+    plan.searches.length > 0 &&
+    plan.searches.length <= MAX_AREA_SEARCHES
 
   useEffect(() => saveJson('searchQuery', sq), [sq])
+
+  // The districts' points load only when an area is searched (they are a separate download).
+  useEffect(() => {
+    if (!open || !inArea || areaData) return
+    void import('../../shared/districts-bg.json').then((m) =>
+      setAreaData(m.default as unknown as DistrictsData),
+    )
+  }, [open, inArea, areaData])
 
   /** Read imot.bg's form for a deal (and place); keep the query in step with it. */
   const load = async (deal: SearchDeal, location: string): Promise<void> => {
@@ -147,7 +192,9 @@ export function SearchDialog({
 
   useEffect(() => {
     if (!open) return
-    if (view === 'job' && !running && job?.searchUrl !== url) setView('form')
+    setWhere(start)
+    if (view === 'job' && !running && job?.searchUrl !== links[0]?.url)
+      setView('form')
     const { form: f, sq: q } = latest.current
     if (!f || f.deal !== q.deal || (q.location && f.location !== q.location))
       void load(q.deal, q.location)
@@ -161,7 +208,7 @@ export function SearchDialog({
   }
 
   const submit = async () => {
-    if (!form || busy || loading || running) return
+    if (!form || busy || loading || running || (inArea && !planOk)) return
     setInvalid(null)
     const p = payloadOf(sq, form)
     const label = (key: string | null) =>
@@ -204,8 +251,29 @@ export function SearchDialog({
     setBusy(true)
     setNote(null)
     try {
-      const res = await startSearch({ workspace, query: p, options })
-      setUrl(res.url)
+      if (inArea) {
+        // The area stands in for the place and its districts.
+        const { location, districts, ...query } = p
+        void location
+        void districts
+        const res = await startAreaSearch({ workspace, query, area, options })
+        setLinks(res.searches)
+        onStarted({
+          urls: res.searches.map((s) => s.url),
+          area,
+          job: res.job,
+        })
+      } else {
+        const res = await startSearch({ workspace, query: p, options })
+        setLinks([
+          {
+            url: res.url,
+            location: p.location,
+            districts: p.districts.length,
+          },
+        ])
+        onStarted({ urls: [res.url], area: null, job: res.job })
+      }
       setView('job')
       requestAnimationFrame(() => progressEl.current?.focus())
     } catch (err) {
@@ -229,13 +297,13 @@ export function SearchDialog({
       : (note ??
         (running
           ? { text: t('sfBusy') }
-          : form && !sq.location
-            ? { text: t('sfNoLocation') }
-            : null))
-  const params = (
-    job?.inputs.find((i) => i.input === url)?.paramsText ?? ''
-  ).replace(/[\s,]+$/, '')
-  const link = safeUrl(url)
+          : inArea
+            ? planOk && plan.searches.length > 1
+              ? { text: t('sfAreaSearches', { n: plan.searches.length }) }
+              : null
+            : form && !sq.location
+              ? { text: t('sfNoLocation') }
+              : null))
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -266,6 +334,18 @@ export function SearchDialog({
               <Fields
                 form={form}
                 sq={sq}
+                where={
+                  area
+                    ? {
+                        value: where,
+                        onChange: (w) => {
+                          setNote(null)
+                          setWhere(w)
+                        },
+                        plan,
+                      }
+                    : null
+                }
                 dim={!!loading && form.deal !== sq.deal}
                 invalid={invalid}
                 moreOpen={moreOpen}
@@ -312,27 +392,7 @@ export function SearchDialog({
             tabIndex={-1}
             className="flex flex-1 flex-col gap-4 overflow-auto p-6 outline-none max-[560px]:px-4 max-[560px]:pt-4"
           >
-            {link && (
-              <div className="flex flex-col gap-1.5">
-                <a
-                  href={link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 self-start font-medium"
-                >
-                  <ArrowSquareOutIcon aria-hidden="true" className="size-4" />
-                  <span>{t('sfOnImot')}</span>
-                </a>
-                {params && (
-                  <p className="m-0 line-clamp-2 text-[12.5px] text-muted-foreground">
-                    <span className="font-medium text-foreground-2">
-                      {t('sourceParamsLabel')}
-                    </span>{' '}
-                    <span lang="bg">{params}</span>
-                  </p>
-                )}
-              </div>
-            )}
+            <Links links={links} job={job} />
             <JobView job={job} />
           </div>
         )}
@@ -372,7 +432,9 @@ export function SearchDialog({
                 type="submit"
                 form="searchForm"
                 size="lg"
-                disabled={!form || !!loading || running || busy}
+                disabled={
+                  !form || !!loading || running || busy || (inArea && !planOk)
+                }
                 className={cn(
                   busy &&
                     'after:size-2.5 after:animate-spin after:rounded-full after:border-2 after:border-current after:border-r-transparent',
@@ -477,6 +539,7 @@ function Chip({
 function Fields({
   form,
   sq,
+  where,
   dim,
   invalid,
   moreOpen,
@@ -487,6 +550,12 @@ function Fields({
 }: {
   form: SearchForm
   sq: SearchQueryState
+  /** With an area drawn: search inside it or in a place, and what searching it means (null while loading). */
+  where: {
+    value: Where
+    onChange: (w: Where) => void
+    plan: AreaPlan | null
+  } | null
   dim: boolean
   invalid: string | null
   moreOpen: boolean
@@ -754,29 +823,52 @@ function Fields({
         </p>
       </fieldset>
       <div className="flex min-w-0 flex-col gap-2">
-        <FieldLabel htmlFor="sfLocation">{t('sfLocation')}</FieldLabel>
-        <NativeSelect
-          id="sfLocation"
-          name="location"
-          className="w-full"
-          value={sq.location}
-          onChange={(e) => onLocation(e.target.value)}
-        >
-          <NativeSelectOption value="">{t('sfAnywhere')}</NativeSelectOption>
-          {locGroup(
-            t('sfCities'),
-            locs.filter((v) => v.startsWith('град ')),
-          )}
-          {locGroup(
-            t('sfProvinces'),
-            locs.filter((v) => v.startsWith('област ')),
-          )}
-          {locGroup(
-            t('sfAbroad'),
-            locs.filter((v) => !/^(град|област) /.test(v)),
-          )}
-        </NativeSelect>
-        <Districts form={form} sq={sq} onChange={onChange} />
+        {where?.value === 'area' ? (
+          <FieldLabel>{t('sfLocation')}</FieldLabel>
+        ) : (
+          <FieldLabel htmlFor="sfLocation">{t('sfLocation')}</FieldLabel>
+        )}
+        {where && (
+          <Segmented
+            label={t('sfLocation')}
+            value={where.value}
+            options={[
+              ['area', t('drawnArea')],
+              ['place', t('sfWherePlace')],
+            ]}
+            onChange={(v) => where.onChange(v === 'area' ? 'area' : 'place')}
+          />
+        )}
+        {where?.value === 'area' ? (
+          <AreaPlanView plan={where.plan} />
+        ) : (
+          <>
+            <NativeSelect
+              id="sfLocation"
+              name="location"
+              className="w-full"
+              value={sq.location}
+              onChange={(e) => onLocation(e.target.value)}
+            >
+              <NativeSelectOption value="">
+                {t('sfAnywhere')}
+              </NativeSelectOption>
+              {locGroup(
+                t('sfCities'),
+                locs.filter((v) => v.startsWith('град ')),
+              )}
+              {locGroup(
+                t('sfProvinces'),
+                locs.filter((v) => v.startsWith('област ')),
+              )}
+              {locGroup(
+                t('sfAbroad'),
+                locs.filter((v) => !/^(град|област) /.test(v)),
+              )}
+            </NativeSelect>
+            <Districts form={form} sq={sq} onChange={onChange} />
+          </>
+        )}
       </div>
       <div className="grid grid-cols-2 items-start gap-x-8 gap-y-6 max-[640px]:grid-cols-1">
         <div
@@ -1092,5 +1184,155 @@ function Districts({
         )}
       </ul>
     </fieldset>
+  )
+}
+
+/** What searching the drawn area means: per imot.bg place, the districts inside it. */
+function AreaPlanView({ plan }: { plan: AreaPlan | null }) {
+  const { t, fmt, lang } = useApp()
+  if (!plan)
+    return (
+      <p className="m-0 mt-1 flex items-center gap-2.5 text-xs text-foreground-2">
+        <span className="size-4 animate-spin rounded-full border-2 border-surface-3 border-t-primary" />
+        {t('sfAreaLoading')}
+      </p>
+    )
+  if (!plan.places.length)
+    return (
+      <p className="m-0 mt-1 rounded-[10px] bg-muted px-3.5 py-3 text-[13px] text-foreground-2">
+        {t('sfAreaEmpty')}
+      </p>
+    )
+  const tooBig = plan.searches.length > MAX_AREA_SEARCHES
+  return (
+    <div className="mt-1 flex flex-col gap-2.5">
+      {tooBig && (
+        <p className="m-0 rounded-[10px] bg-destructive/10 px-3.5 py-3 text-[13px] text-destructive">
+          {t('sfAreaTooBig', {
+            n: fmt.num(plan.searches.length),
+            max: fmt.num(MAX_AREA_SEARCHES),
+          })}
+        </p>
+      )}
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        {plan.places.map((p) => {
+          const city = p.location.startsWith('град ')
+          const shown = p.districts.slice(0, 8)
+          const more = p.districts.length - shown.length
+          return (
+            <li
+              key={p.location}
+              className="flex flex-col gap-1 rounded-[10px] border px-3.5 py-3"
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                <span className="text-[13.5px] font-semibold">
+                  {locationLabel(p.location, lang)}
+                </span>
+                <span className="text-[12.5px] text-muted-foreground tabular">
+                  {t(city ? 'sfAreaDistricts' : 'sfAreaPlaces', {
+                    n: fmt.num(p.districts.length),
+                    total: fmt.num(p.total),
+                  })}
+                </span>
+              </div>
+              <p className="m-0 text-[13px] text-foreground-2">
+                {shown.map((d) => districtLabel(d, lang)).join(', ')}
+                {more > 0 && (
+                  <span className="text-muted-foreground">
+                    {' '}
+                    {t('sfAreaMore', { n: fmt.num(more) })}
+                  </span>
+                )}
+              </p>
+              {p.unplaced > 0 && (
+                <p className="m-0 text-[12px] text-muted-foreground">
+                  {t(city ? 'sfAreaUnplacedCity' : 'sfAreaUnplacedProvince', {
+                    n: fmt.num(p.unplaced),
+                  })}
+                </p>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      <p className="m-0 text-[12.5px] text-muted-foreground">
+        {t('sfAreaNote')}
+      </p>
+    </div>
+  )
+}
+
+/** The search links an import was started with, and imot.bg's summary of each. */
+function Links({
+  links,
+  job,
+}: {
+  links: Array<Link>
+  job: Job | null | undefined
+}) {
+  const { t, fmt, lang } = useApp()
+  const paramsOf = (url: string) =>
+    (job?.inputs.find((i) => i.input === url)?.paramsText ?? '').replace(
+      /[\s,]+$/,
+      '',
+    )
+  const params = (url: string) => {
+    const text = paramsOf(url)
+    return text ? (
+      <p className="m-0 line-clamp-2 text-[12.5px] text-muted-foreground">
+        <span className="font-medium text-foreground-2">
+          {t('sourceParamsLabel')}
+        </span>{' '}
+        <span lang="bg">{text}</span>
+      </p>
+    ) : null
+  }
+  const open = (url: string, label: string) => {
+    const href = safeUrl(url)
+    return href ? (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 self-start font-medium"
+      >
+        <ArrowSquareOutIcon aria-hidden="true" className="size-4 flex-none" />
+        <span>{label}</span>
+      </a>
+    ) : null
+  }
+  if (!links.length) return null
+  if (links.length === 1)
+    return (
+      <div className="flex flex-col gap-1.5">
+        {open(links[0].url, t('sfOnImot'))}
+        {params(links[0].url)}
+      </div>
+    )
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-[13px] font-semibold">
+        {t('sfAreaLinks', { n: fmt.num(links.length) })}
+      </span>
+      <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
+        {links.map((l) => (
+          <li key={l.url} className="flex flex-col gap-1">
+            {open(
+              l.url,
+              t(
+                l.location.startsWith('град ')
+                  ? 'sfAreaLinkCity'
+                  : 'sfAreaLinkProvince',
+                {
+                  place: locationLabel(l.location, lang),
+                  n: l.districts,
+                },
+              ),
+            )}
+            {params(l.url)}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

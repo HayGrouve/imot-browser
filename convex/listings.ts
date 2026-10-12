@@ -53,26 +53,6 @@ export const details = query({
   },
 })
 
-/** The heavy parts of up to 200 listings (the CSV export). */
-export const detailsMany = query({
-  args: { workspace: v.string(), imotIds: v.array(v.string()) },
-  handler: async (ctx, { workspace, imotIds }) => {
-    checkWorkspace(workspace)
-    if (imotIds.length > 200) fail('badRequest')
-    const out = []
-    for (const imotId of imotIds) {
-      const row = await ctx.db
-        .query('listingDetails')
-        .withIndex('by_workspace_imot', (q) =>
-          q.eq('workspace', workspace).eq('imotId', imotId),
-        )
-        .unique()
-      if (row) out.push(detailsForClient(row))
-    }
-    return out
-  },
-})
-
 /** "Delete all data": every listing and search of the workspace, in the background. */
 export const removeAll = mutation({
   args: { workspace: v.string() },

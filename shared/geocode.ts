@@ -6,7 +6,15 @@
 import { fuzzyKey } from './text'
 
 export const NOMINATIM_ENDPOINT = 'https://nominatim.openstreetmap.org/search'
-const BG_BBOX = { minLat: 41.2, maxLat: 44.25, minLon: 22.3, maxLon: 28.7 }
+/** Nominatim's usage policy asks for an identifying User-Agent. */
+export const NOMINATIM_UA =
+  'onova-za-imotite/1.0 (+https://github.com/HayGrouve/onova-za-imotite)'
+export const BG_BBOX = {
+  minLat: 41.2,
+  maxLat: 44.25,
+  minLon: 22.3,
+  maxLon: 28.7,
+}
 
 export interface NominatimHit {
   lat: number
@@ -31,11 +39,15 @@ export const stripHoodPrefix = (s: string | null | undefined) =>
   String(s || '')
     .trim()
     .replace(
-      /^(ж\.?\s?к\.?|кв\.|квартал|м-т|местност|в\.\s?з\.|вилна зона)\s*/i,
+      /^(ж\.?\s?к\.?|ж\.?\s?гр\.?|кв\.|квартал|м-т|местност|в\.\s?з\.|вилна зона|к\.\s?к\.)\s*/i,
       '',
     )
     .trim()
 const hoodKey = (s: string) => fuzzyKey(stripHoodPrefix(s)).replace(/ /g, '')
+// A locality, villa zone or resort is no housing estate (ж.к.) or quarter (кв.).
+const NOT_A_QUARTER = /^(м-т|местност|в\.\s?з\.|вилна зона|к\.\s?к\.)/i
+// A numbered or lettered estate ("Люлин 7", "Левски Г", "Младост 1А") and its base name.
+const NUMBERED = /^(.+?)\s+(?:\d+[А-Яа-я]?|[А-Я])$/
 
 // Nominatim's names for Bulgarian provinces match imot.bg's except Sofia Province.
 const nominatimState = (oblast: string | null | undefined) =>
@@ -57,6 +69,21 @@ const PLACE_TYPES = new Set([
   'allotments',
   'municipality',
   'place',
+])
+
+// A quarter is part of its city: a city, town or village of that name is another settlement
+// (Изгрев by Varna is a village of Суворово).
+const SETTLEMENTS = new Set(['city', 'town', 'village'])
+// Administrative areas: a city's район can share its name with the квартал imot.bg means.
+const ADMIN_TYPES = new Set([
+  'county',
+  'state_district',
+  'district',
+  'borough',
+  'city_district',
+  'suburb',
+  'quarter',
+  'municipality',
 ])
 
 const KIND_TYPES: Record<string, Array<string>> = {
@@ -142,30 +169,100 @@ export async function geocodeSettlement(
 }
 
 /**
- * Neighbourhood inside a city; must lie within `maxKm` of the city centre and actually carry the
- * neighbourhood's name (Nominatim happily returns a *different* quarter as its best guess).
+ * Neighbourhood inside a city, within `maxKm` of the city centre. Nominatim happily returns a
+ * street, a bus stop or a *different* quarter as its best guess, so the first acceptable answer
+ * of these wins:
+ * 1. a place carrying the neighbourhood's name;
+ * 2. the same, asked as a housing estate ("ж.к. X") and as a quarter ("кв. X"), which is how
+ *    OpenStreetMap often names them;
+ * 3. anything, a street or a stop too, whose address lies in the neighbourhood;
+ * 4. an administrative area of that name (a район can be far bigger than its квартал);
+ * 5. for a numbered estate ("Люлин 7"), all of the above for its base name ("Люлин").
+ * Later questions are asked only when the earlier answers don't do. `inCity` tells whether an
+ * address part is a settlement of the city's own municipality (true), another municipality's
+ * settlement at that spot (false), or neither (null): an answer whose first such part is false
+ * lies in another town.
  */
 export async function geocodeNeighborhood(
   search: NominatimSearch,
   name: string,
   city: string,
   center: GeoPoint | null,
-  { maxKm = 20 }: { maxKm?: number } = {},
+  {
+    maxKm = 20,
+    inCity,
+  }: {
+    maxKm?: number
+    inCity?: (part: string, at: GeoPoint) => boolean | null
+  } = {},
 ): Promise<GeoPoint | null> {
   const clean = stripHoodPrefix(name)
-  const results = await search(`${clean}, ${city}, България`)
-  if (!results || !results.length) return null
+  const quarter = !NOT_A_QUARTER.test(name.trim())
+  const base = clean.match(NUMBERED)?.[1]
+  const find = (n: string) =>
+    findHood(search, n, city, center, { maxKm, quarter, inCity })
+  return (await find(clean)) ?? (base ? await find(base) : null)
+}
+
+/** A hit's address after its own name, which may hold a comma itself ("Кв. Банево, Център"). */
+function addressParts(r: NominatimHit): Array<string> {
+  const comma = r.display.indexOf(',')
+  const rest =
+    r.name && r.display.startsWith(`${r.name},`)
+      ? r.display.slice(r.name.length + 1)
+      : comma < 0
+        ? ''
+        : r.display.slice(comma + 1)
+  return rest.split(',').map((part) => part.trim())
+}
+
+async function findHood(
+  search: NominatimSearch,
+  clean: string,
+  city: string,
+  center: GeoPoint | null,
+  {
+    maxKm,
+    quarter,
+    inCity,
+  }: {
+    maxKm: number
+    quarter: boolean
+    inCity?: (part: string, at: GeoPoint) => boolean | null
+  },
+): Promise<GeoPoint | null> {
   const want = hoodKey(clean)
-  const near = results.filter((r) => !center || distKm(r, center) <= maxKm)
   const named = (r: NominatimHit) => hoodKey(r.name) === want
-  // Address hierarchy mentions the quarter, e.g. "…, кв. Симеоново, София, …".
+  // Address hierarchy mentions the quarter, e.g. "Гео Милев, ж.к. Гео Милев, София, …".
   const inside = (r: NominatimHit) =>
-    r.display
-      .split(',')
-      .slice(1)
-      .some((part) => hoodKey(part) === want)
+    addressParts(r).some((part) => hoodKey(part) === want)
+  // "кв. Свобода, Поморие, Бургас": Поморие's quarter, not Burgas'. The quarter's own name is
+  // no settlement here, even where a village elsewhere carries it.
+  const local = (r: NominatimHit) => {
+    for (const part of addressParts(r)) {
+      const own = inCity && hoodKey(part) !== want ? inCity(part, r) : null
+      if (own != null) return own
+    }
+    return true
+  }
+  const seen: Array<NominatimHit> = []
+  for (const q of quarter
+    ? [clean, `ж.к. ${clean}`, `кв. ${clean}`]
+    : [clean]) {
+    const near = ((await search(`${q}, ${city}, България`)) ?? []).filter(
+      (r) => (!center || distKm(r, center) <= maxKm) && local(r),
+    )
+    const hit = near.find(
+      (r) =>
+        PLACE_TYPES.has(r.addresstype) &&
+        !SETTLEMENTS.has(r.addresstype) &&
+        named(r),
+    )
+    if (hit) return { lat: hit.lat, lon: hit.lon }
+    seen.push(...near)
+  }
   const best =
-    near.find((r) => PLACE_TYPES.has(r.addresstype) && named(r)) ??
-    near.find((r) => r.addresstype !== 'road' && inside(r))
+    seen.find(inside) ??
+    seen.find((r) => ADMIN_TYPES.has(r.addresstype) && named(r))
   return best ? { lat: best.lat, lon: best.lon } : null
 }

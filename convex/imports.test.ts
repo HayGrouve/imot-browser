@@ -9,6 +9,29 @@ const WS = 'workspace-aaaaaaaaaaaa1'
 const WS2 = 'workspace-bbbbbbbbbbbb2'
 const OPTIONS = { details: true, autoSplit: true, geocodeOnline: true }
 const SEARCH = 'https://www.imot.bg/obiavi/prodazhbi/grad-gabrovo/kashta'
+const AREA_QUERY = {
+  deal: 'rent',
+  types: [],
+  priceMin: '',
+  priceMax: '',
+  currency: 'EUR',
+  ppmMin: '',
+  ppmMax: '',
+  areaMin: '',
+  areaMax: '',
+  floorFrom: '',
+  floorTo: '',
+  sort: '',
+  keyword: '',
+  yardMin: '',
+  yardMax: '',
+  status: [],
+  yearFrom: '',
+  yearTo: '',
+  extras: {},
+  photoOnly: false,
+  videoOnly: false,
+}
 
 // Scheduled steps fetch imot.bg: with fake timers they never run unless a test runs them.
 beforeEach(() => {
@@ -17,6 +40,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   vi.useRealTimers()
+  vi.unstubAllGlobals()
 })
 
 function card(
@@ -123,6 +147,66 @@ describe('the queue', () => {
         t.query(api.listings.details, { workspace: 'a b', imotId: '1' }),
       ),
     ).toBe('badWorkspace')
+  })
+
+  test('a dialog search is one import of all its links, named by the first', async () => {
+    const t = setupConvex()
+    const other = 'https://www.imot.bg/obiavi/prodazhbi/oblast-gabrovo/kashta'
+    const id = await t.mutation(internal.imports.enqueueSearch, {
+      workspace: WS,
+      urls: [SEARCH, other, SEARCH],
+      options: OPTIONS,
+    })
+    const cur = await t.query(api.imports.current, { workspace: WS })
+    expect(cur?.id).toBe(id)
+    expect(cur?.status).toBe('running')
+    expect(cur?.searchUrl).toBe(SEARCH)
+    expect(cur?.inputs.map((i) => i.input)).toEqual([SEARCH, other])
+  })
+
+  test('an area search checks the area before it asks imot.bg', async () => {
+    // Actions run on timers; these end before anything is scheduled, and before any request.
+    vi.useRealTimers()
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('no network here')))
+    const t = setupConvex()
+    const search = (area: Array<Array<number>>) =>
+      t.action(api.searchForm.startAreaSearch, {
+        workspace: WS,
+        query: AREA_QUERY,
+        area,
+        options: OPTIONS,
+      })
+    // Paris; the Black Sea off Varna; all of Bulgaria.
+    expect(
+      await errorCodeOf(
+        search([
+          [48.85, 2.35],
+          [48.9, 2.4],
+          [48.8, 2.4],
+        ]),
+      ),
+    ).toBe('badArea')
+    expect(
+      await errorCodeOf(
+        search([
+          [43.2, 28.5],
+          [43.2, 28.6],
+          [43.1, 28.6],
+        ]),
+      ),
+    ).toBe('areaEmpty')
+    expect(
+      await errorCodeOf(
+        search([
+          [44.3, 22.3],
+          [44.3, 28.7],
+          [41.2, 28.7],
+          [41.2, 22.3],
+        ]),
+      ),
+    ).toBe('areaTooBig')
+    // Nothing was reserved or queued.
+    expect(await t.query(api.imports.current, { workspace: WS })).toBeNull()
   })
 
   test('a step that stops reporting ends, and the queue moves on', async () => {

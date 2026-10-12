@@ -4,7 +4,7 @@ import { Button } from '#/components/ui/button'
 import { Dialog, DialogContent } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
 import { useApp } from './app-context'
-import { DIALOG, DialogHead } from './import-dialog'
+import { DIALOG, DialogHead } from './searches-dialog'
 import { workspaceLink } from '#/lib/workspace'
 
 /** The link that opens this browser's listings on another device (there is no sign-in yet). */
