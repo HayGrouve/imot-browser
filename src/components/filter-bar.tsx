@@ -3,6 +3,7 @@ import {
   CaretDownIcon,
   CheckIcon,
   MagnifyingGlassIcon,
+  PolygonIcon,
   StarIcon,
   XIcon,
 } from '@phosphor-icons/react'
@@ -219,6 +220,24 @@ export function FilterBar({
       role="group"
       aria-label={t('filters')}
     >
+      {/* First: it was set on the map, so say so where a phone shows it. */}
+      {f.drawnArea && (
+        <span className="inline-flex h-9 flex-none items-center rounded-full border border-foreground bg-muted shadow-[inset_0_0_0_1px_var(--foreground)]">
+          <span className="inline-flex items-center gap-1.5 pr-1 pl-3.5 text-[13.5px] font-semibold whitespace-nowrap @max-[640px]:pl-[11px] @max-[640px]:text-[13px]">
+            <PolygonIcon aria-hidden="true" className="size-[15px]" />
+            {t('drawnArea')}
+          </span>
+          <button
+            type="button"
+            className="inline-flex h-full cursor-pointer items-center rounded-full pr-2.5 pl-1.5 text-foreground-2 hover:text-foreground"
+            title={t('clearDrawnArea')}
+            aria-label={t('clearDrawnArea')}
+            onClick={() => onChange({ drawnArea: null })}
+          >
+            <XIcon aria-hidden="true" className="size-[15px]" />
+          </button>
+        </span>
+      )}
       {keys.map((key) => {
         const s = pillState(key)
         return (

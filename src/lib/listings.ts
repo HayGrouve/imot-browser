@@ -73,6 +73,8 @@ export interface Filters {
   unmapped: boolean
   /** Show the listings the reader hid, instead of the others. */
   hidden: boolean
+  /** An area drawn on the map: only the listings inside it. */
+  drawnArea: DrawnArea | null
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -91,6 +93,7 @@ export const DEFAULT_FILTERS: Filters = {
   hideStale: false,
   unmapped: false,
   hidden: false,
+  drawnArea: null,
 }
 
 export function typeValue(l: Pick<Listing, 'type' | 'typeBg'>): string {
@@ -133,6 +136,45 @@ export function groupOf(
   return { key: p.key, lat: p.lat, lon: p.lon, place: p }
 }
 
+/** A polygon drawn on the map, as [lat, lon] corners. */
+export type DrawnArea = Array<[number, number]>
+
+/** A saved drawn area, or null when it isn't one (at least three [lat, lon] corners). */
+export function validDrawnArea(v: unknown): DrawnArea | null {
+  if (!Array.isArray(v) || v.length < 3) return null
+  const ok = v.every(
+    (p) =>
+      Array.isArray(p) &&
+      p.length === 2 &&
+      p.every((x) => typeof x === 'number' && Number.isFinite(x)),
+  )
+  return ok ? (v as DrawnArea) : null
+}
+
+/** Ray casting (even-odd, like the drawn shape's fill). */
+export function insidePolygon(lat: number, lon: number, poly: DrawnArea) {
+  let inside = false
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [yi, xi] = poly[i]
+    const [yj, xj] = poly[j]
+    if (
+      yi > lat !== yj > lat &&
+      lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi
+    )
+      inside = !inside
+  }
+  return inside
+}
+
+/** Whether the listing's best-known point (its neighbourhood, else its settlement) is in the area. */
+export function inDrawnArea(
+  l: Pick<Listing, 'place' | 'nbhd'>,
+  area: DrawnArea,
+): boolean {
+  const g = groupOf(l, 'neighborhood')
+  return !!g && insidePolygon(g.lat, g.lon, area)
+}
+
 export function matchesPlace(l: Listing, key: string): boolean {
   if (key.startsWith('nb:')) return groupOf(l, 'neighborhood')?.key === key
   return l.place?.key === key
@@ -172,6 +214,7 @@ export function applyFilters(
     if (f.onlyNew && !l.fresh) return false
     if (f.hideStale && l.stale) return false
     if (f.unmapped && !isUnmapped(l)) return false
+    if (f.drawnArea && !inDrawnArea(l, f.drawnArea)) return false
     for (const term of terms) if (!l.searchText.includes(term)) return false
     return true
   })

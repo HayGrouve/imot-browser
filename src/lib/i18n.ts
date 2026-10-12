@@ -164,6 +164,13 @@ const STRINGS = {
     exVatTitle:
       'Price excludes VAT (imot.bg filters searches on the price including VAT)',
     fit: 'Zoom to results',
+    drawArea: 'Draw an area',
+    drawAreaAgain: 'Draw a new area',
+    drawHint: 'Draw around the area you want',
+    drawNote:
+      'Listings sit at the centre of their neighbourhood or settlement.',
+    drawnArea: 'Drawn area',
+    clearDrawnArea: 'Remove the drawn area',
     popupCount: '{n} listings',
     popupMedian: 'Median price {price} · {ppm}/m²',
     popupRange: 'Range {min} to {max}',
@@ -594,6 +601,12 @@ const STRINGS = {
     exVatTitle:
       'Цената е без ДДС (imot.bg филтрира търсенията по цената с ДДС)',
     fit: 'Покажи всички резултати',
+    drawArea: 'Очертай район',
+    drawAreaAgain: 'Очертай нов район',
+    drawHint: 'Очертайте района, който ви интересува',
+    drawNote: 'Обявите са в центъра на своя квартал или населено място.',
+    drawnArea: 'Очертан район',
+    clearDrawnArea: 'Премахни очертания район',
     popupCount: '{n} обяви',
     popupMedian: 'Медианна цена {price} · {ppm}/м²',
     popupRange: 'От {min} до {max}',

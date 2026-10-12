@@ -36,6 +36,7 @@ import {
   poolOf,
   prepare,
   sortListings,
+  validDrawnArea,
   validSort,
 } from '#/lib/listings'
 import type { Filters, GroupMode, Sort } from '#/lib/listings'
@@ -68,7 +69,11 @@ function initialPrefs(): Prefs {
       saved.baseLayer && saved.baseLayer in BASE_LAYERS
         ? saved.baseLayer
         : 'light',
-    filters: { ...DEFAULT_FILTERS, ...saved.filters },
+    filters: {
+      ...DEFAULT_FILTERS,
+      ...saved.filters,
+      drawnArea: validDrawnArea(saved.filters?.drawnArea),
+    },
   }
 }
 
@@ -456,6 +461,7 @@ export function App() {
               baseLayer={prefs.baseLayer}
               selectedPlace={prefs.filters.place}
               unmappedActive={prefs.filters.unmapped}
+              drawnArea={prefs.filters.drawnArea}
               onOpen={setDetailId}
               onFilterPlace={(place) => {
                 setFilters({ place })
@@ -464,6 +470,7 @@ export function App() {
               onToggleUnmapped={() =>
                 setFilters({ unmapped: !prefs.filters.unmapped })
               }
+              onDrawnArea={(drawnArea) => setFilters({ drawnArea })}
               onBaseLayer={(baseLayer) =>
                 setPrefs((p) => ({ ...p, baseLayer }))
               }
