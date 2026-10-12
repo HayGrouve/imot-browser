@@ -51,7 +51,7 @@ import {
   sectionsFor,
 } from '#/lib/search-query'
 import type { SearchQueryState } from '#/lib/search-query'
-import { MAX_AREA_SEARCHES, planArea } from '../../shared/area'
+import { MAX_AREA_SEARCHES, planArea, planProblem } from '../../shared/area'
 import type { AreaPlan, DistrictsData, DrawnArea } from '../../shared/area'
 import { adaptQuery } from '../../shared/searchform'
 import type {
@@ -134,10 +134,7 @@ export function SearchDialog({
     () => (area && areaData ? planArea(area, areaData) : null),
     [area, areaData],
   )
-  const planOk =
-    !!plan &&
-    plan.searches.length > 0 &&
-    plan.searches.length <= MAX_AREA_SEARCHES
+  const planOk = !!plan && !planProblem(plan)
 
   useEffect(() => saveJson('searchQuery', sq), [sq])
 
@@ -1203,7 +1200,7 @@ function AreaPlanView({ plan }: { plan: AreaPlan | null }) {
         {t('sfAreaEmpty')}
       </p>
     )
-  const tooBig = plan.searches.length > MAX_AREA_SEARCHES
+  const tooBig = planProblem(plan) === 'areaTooBig'
   return (
     <div className="mt-1 flex flex-col gap-2.5">
       {tooBig && (

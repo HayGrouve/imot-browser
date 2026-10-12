@@ -15,7 +15,12 @@ import { fail } from './lib/errors'
 import { spend } from './lib/rateLimit'
 import { checkWorkspace } from './lib/workspace'
 import { optionsV } from './validators'
-import { MAX_AREA_SEARCHES, planArea, validArea } from '../shared/area'
+import {
+  MAX_AREA_SEARCHES,
+  planArea,
+  planProblem,
+  validArea,
+} from '../shared/area'
 import type { DistrictsData } from '../shared/area'
 import { classifyUrl } from '../shared/parse'
 import {
@@ -46,10 +51,12 @@ async function fromImot<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+/** `fetcher`: the caller's, when it also reads imot.bg, so the requests keep one pace. */
 async function formFor(
   ctx: ActionCtx,
   deal: SearchDeal,
   location: string,
+  fetcher = new Fetcher({ minIntervalMs: 350, concurrency: 2 }),
 ): Promise<SearchForm> {
   const key = `${deal}|${location}`
   const cached = await ctx.runQuery(internal.searchForms.cached, { key })
@@ -57,7 +64,6 @@ async function formFor(
     return JSON.parse(cached.form) as SearchForm
   await spend(ctx, 'searchForm', 'all')
   const form = await fromImot(async () => {
-    const fetcher = new Fetcher({ minIntervalMs: 350, concurrency: 2 })
     // A place's form page has its own address (/search/prodazhbi/grad-sofiya), so ask the builder.
     const url = location
       ? builderResult(
@@ -187,9 +193,9 @@ export const startAreaSearch = action({
     if (!poly) fail('badArea')
     // The plan is made here, from the area: a district list from the browser isn't trusted.
     const plan = planArea(poly, districtsData as unknown as DistrictsData)
-    if (!plan.searches.length) fail('areaEmpty')
-    if (plan.searches.length > MAX_AREA_SEARCHES)
-      fail('areaTooBig', {
+    const problem = planProblem(plan)
+    if (problem)
+      fail(problem, {
         searches: plan.searches.length,
         max: MAX_AREA_SEARCHES,
       })
@@ -199,7 +205,7 @@ export const startAreaSearch = action({
     for (const s of plan.searches) {
       // imot.bg's builder drops districts it doesn't know, and with none left it would search
       // the whole place: keep to the ones its form offers today.
-      const form = await formFor(ctx, deal, s.location)
+      const form = await formFor(ctx, deal, s.location, fetcher)
       const districts = s.districts.filter((d) => form.districts.includes(d))
       if (!districts.length) continue
       const url = await fromImot(() =>
