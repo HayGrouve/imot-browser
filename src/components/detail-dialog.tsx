@@ -8,6 +8,7 @@ import {
   CaretLeftIcon,
   CaretRightIcon,
   CaretUpIcon,
+  CornersOutIcon,
   EyeIcon,
   EyeSlashIcon,
   FireIcon,
@@ -28,6 +29,7 @@ import {
 import { api } from '../../convex/_generated/api'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
@@ -91,7 +93,7 @@ export function DetailDialog({
         onKeyDown={(e) => {
           const target = e.target as HTMLElement
           if (
-            target.closest('textarea,input,select') ||
+            target.closest('textarea,input,select,[data-photo-viewer]') ||
             e.ctrlKey ||
             e.metaKey ||
             e.altKey
@@ -355,6 +357,8 @@ function Gallery({ photos }: { photos: Array<string> }) {
   const [i, setI] = useState(0)
   const [broken, setBroken] = useState(false)
   const [src, setSrc] = useState(photos[0] ?? '')
+  const [full, setFull] = useState(false)
+  const swipeX = useRef<number | null>(null)
   const strip = useRef<HTMLDivElement>(null)
   const n = photos.length
   const step = (d: number) => {
@@ -373,7 +377,8 @@ function Gallery({ photos }: { photos: Array<string> }) {
     if (n > 1)
       for (const k of [i + 1, i - 1]) new Image().src = photos[(k + n) % n]
   }, [i, photos, n])
-  // Arrow keys page through the photos while the dialog has focus.
+  // Arrow keys page through the photos while the dialog (or the full-screen view) has focus. Base UI's dialog
+  // stops arrow keys from bubbling, so this listens in the capture phase.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
@@ -390,8 +395,8 @@ function Gallery({ photos }: { photos: Array<string> }) {
       else return
       e.preventDefault()
     }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    document.addEventListener('keydown', onKey, true)
+    return () => document.removeEventListener('keydown', onKey, true)
   })
 
   if (!n)
@@ -425,6 +430,27 @@ function Gallery({ photos }: { photos: Array<string> }) {
       )}
     </button>
   )
+  const counter = (
+    <span
+      aria-live="polite"
+      className="inline-flex h-[26px] items-center gap-1.5 rounded-full bg-[rgb(15_15_17/.7)] px-2.5 text-xs font-medium text-[#fafafa] tabular"
+    >
+      <ImageIcon aria-hidden="true" className="size-3.5 opacity-85" />
+      {fmt.num(i + 1)} / {fmt.num(n)}
+    </span>
+  )
+  // A horizontal swipe on a touch screen pages through the photos.
+  const swipe = {
+    onPointerDown: (e: React.PointerEvent) => {
+      swipeX.current = e.pointerType === 'mouse' ? null : e.clientX
+    },
+    onPointerUp: (e: React.PointerEvent) => {
+      if (swipeX.current === null) return
+      const dx = e.clientX - swipeX.current
+      swipeX.current = null
+      if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1)
+    },
+  }
   return (
     <div className="flex flex-col gap-2.5">
       <div className="group/photo relative isolate aspect-[4/3] overflow-hidden rounded-[10px] bg-[#0f0f11] max-[560px]:-mx-4 max-[560px]:-mt-4 max-[560px]:rounded-none">
@@ -441,22 +467,67 @@ function Gallery({ photos }: { photos: Array<string> }) {
               onError={onError}
               className="block size-full object-contain"
             />
+            <button
+              type="button"
+              onClick={() => setFull(true)}
+              title={t('fullScreen')}
+              aria-label={t('fullScreen')}
+              className="absolute inset-0 cursor-zoom-in border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+            >
+              <span className="absolute top-3 right-3 grid size-8 place-items-center rounded-full bg-[rgb(15_15_17/.7)] text-[#fafafa] transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/photo:opacity-100">
+                <CornersOutIcon aria-hidden="true" className="size-4" />
+              </span>
+            </button>
           </>
         )}
         {n > 1 && (
           <>
             {nav(-1)}
             {nav(1)}
-            <span
-              aria-live="polite"
-              className="absolute right-3 bottom-3 inline-flex h-[26px] items-center gap-1.5 rounded-full bg-[rgb(15_15_17/.7)] px-2.5 text-xs font-medium text-[#fafafa] tabular"
-            >
-              <ImageIcon aria-hidden="true" className="size-3.5 opacity-85" />
-              {fmt.num(i + 1)} / {fmt.num(n)}
-            </span>
+            <span className="absolute right-3 bottom-3">{counter}</span>
           </>
         )}
       </div>
+      <Dialog open={full && !broken} onOpenChange={setFull}>
+        <DialogContent
+          showCloseButton={false}
+          data-photo-viewer=""
+          className="flex h-dvh w-screen max-w-none items-center justify-center rounded-none bg-[#0a0a0c] p-0 ring-0 sm:max-w-none"
+        >
+          <DialogTitle className="sr-only">
+            {t('photoOf', { i: i + 1, n })}
+          </DialogTitle>
+          <div
+            {...swipe}
+            onClick={(e) => e.target === e.currentTarget && setFull(false)}
+            className="group/photo absolute inset-0 flex touch-pan-y items-center justify-center p-[max(56px,env(safe-area-inset-top))_16px_max(56px,env(safe-area-inset-bottom))] max-[560px]:px-0"
+          >
+            <img
+              src={src}
+              alt={t('photoOf', { i: i + 1, n })}
+              onError={onError}
+              className="max-h-full max-w-full object-contain select-none"
+              draggable={false}
+            />
+            {n > 1 && (
+              <>
+                {nav(-1)}
+                {nav(1)}
+              </>
+            )}
+          </div>
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-3 pt-[max(12px,env(safe-area-inset-top))] [&>*]:pointer-events-auto">
+            {n > 1 ? counter : <span />}
+            <DialogClose
+              title={t('close')}
+              aria-label={t('close')}
+              className="grid size-10 cursor-pointer place-items-center rounded-full border-0 bg-white/12 text-[#fafafa] transition-colors hover:bg-white/22 focus-visible:outline-2 focus-visible:outline-white"
+            >
+              <XIcon aria-hidden="true" className="size-5" />
+            </DialogClose>
+          </div>
+        </DialogContent>
+      </Dialog>
       {n > 1 && (
         <div
           ref={strip}
