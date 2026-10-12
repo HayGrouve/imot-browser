@@ -70,6 +70,7 @@ const STRINGS = {
     loadErrorBody: 'Check your connection and reload the page. ({message})',
     viewMap: 'Map',
     viewList: 'List',
+    resizePanes: 'Resize the list and the map',
     mapOptions: 'Map options',
     legendSr:
       'Marker colour shows the median price per m². Band limits: {breaks} €.',
@@ -499,6 +500,7 @@ const STRINGS = {
     loadErrorBody: 'Проверете връзката и презаредете страницата. ({message})',
     viewMap: 'Карта',
     viewList: 'Списък',
+    resizePanes: 'Преоразмеряване на списъка и картата',
     mapOptions: 'Настройки на картата',
     legendSr:
       'Цветът на маркера показва медианната цена на м². Граници: {breaks} €.',

@@ -2,8 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from 'convex/react'
 import { ListBulletsIcon, MapTrifoldIcon } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import type { GroupImperativeHandle, Layout } from 'react-resizable-panels'
 import { api } from '../../convex/_generated/api'
 import { cn } from '#/lib/utils'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from '#/components/ui/resizable'
 import { AppContext } from './app-context'
 import type { AppContextValue } from './app-context'
 import { Topbar, useMedia } from './topbar'
@@ -75,6 +81,20 @@ function initialPrefs(): Prefs {
   }
 }
 
+/** Wide screens: the list is `px` wide, by default the width it was last
+ *  dragged to in this browser (at first min(780px, 56%)), and the map takes
+ *  the rest of the window. */
+function paneLayout(px?: number): Layout {
+  const width = window.innerWidth
+  const saved = loadJson<unknown>('listWidth', null)
+  px ??=
+    typeof saved === 'number' && saved > 0
+      ? saved
+      : Math.round(Math.min(780, width * 0.56))
+  const list = Math.min(100, (100 * px) / width)
+  return { 'list-pane': list, 'map-pane': 100 - list }
+}
+
 /** State that outlives a reload, saved a moment after it changes. */
 function usePersisted<T>(
   key: string,
@@ -128,6 +148,8 @@ export function App() {
   const scroll = useRef<HTMLDivElement>(null)
   const toolbar = useRef<HTMLDivElement>(null)
   const narrow = useMedia('(max-width: 1000px)')
+  const panes = useRef<GroupImperativeHandle>(null)
+  const [initialPanes] = useState(paneLayout)
 
   const lang = prefs.lang
   const t = useCallback(
@@ -299,6 +321,11 @@ export function App() {
     return () => ro.disconnect()
   }, [all])
 
+  // Wide again: the list gets back the width a narrow screen squeezed.
+  useEffect(() => {
+    if (!narrow) panes.current?.setLayout(paneLayout())
+  }, [narrow])
+
   const detailIndex = detailId
     ? filtered.findIndex((l) => l.id === detailId)
     : -1
@@ -329,122 +356,168 @@ export function App() {
           onShare={() => setDialog('share')}
           onAbout={() => setDialog('about')}
         />
-        <main className="relative min-h-0 flex-1 min-[1001px]:grid min-[1001px]:grid-cols-[minmax(440px,min(780px,56%))_minmax(0,1fr)]">
-          <section
-            aria-labelledby="count"
-            className={cn(
-              '@container flex min-h-0 flex-col bg-background max-[1000px]:absolute max-[1000px]:inset-0 min-[1001px]:relative min-[1001px]:border-r',
-              narrow && view === 'map' && 'invisible z-[2]',
-            )}
+        <main className="relative min-h-0 flex-1">
+          {/* One tree on every screen, so the map is never re-created: narrow
+              screens stack both panes over <main> and hide the handle. The
+              library makes the panes pan-y only (no pinch-zoom); the handle
+              alone needs that, and gets touch-none. */}
+          <ResizablePanelGroup
+            groupRef={panes}
+            defaultLayout={initialPanes}
+            onLayoutChanged={(layout, { isUserInteraction }) => {
+              const px = (layout['list-pane'] * window.innerWidth) / 100
+              if (isUserInteraction) saveJson('listWidth', Math.round(px))
+              // Whole pixels: map tiles at a fractional offset show seams.
+              if (!narrow && Math.abs(px - Math.round(px)) > 0.05)
+                panes.current?.setLayout(paneLayout(Math.round(px)))
+            }}
+            disabled={narrow}
+            className="touch-auto!"
           >
-            <a
-              href="#map"
-              className="absolute top-2 left-5 z-[5] -translate-y-[160%] rounded-full bg-primary px-3.5 py-2 font-semibold text-primary-foreground no-underline focus-visible:translate-y-0"
-              onClick={(e) => {
-                e.preventDefault()
-                setView('map')
-                document.getElementById('map')?.focus()
-              }}
+            <ResizablePanel
+              id="list-pane"
+              minSize="400px"
+              groupResizeBehavior="preserve-pixel-size"
+              className="touch-auto!"
             >
-              {t('skipToMap')}
-            </a>
-            {all && all.length > 0 && (
-              <div
-                ref={toolbar}
+              <section
+                aria-labelledby="count"
                 className={cn(
-                  'relative flex-none border-b px-5 pt-3.5 pb-3 max-[720px]:px-0 max-[720px]:py-2.5',
-                  narrow && view === 'map' && 'visible bg-background',
+                  '@container flex min-h-0 flex-col bg-background max-[1000px]:absolute max-[1000px]:inset-0 min-[1001px]:relative min-[1001px]:h-full',
+                  narrow && view === 'map' && 'invisible z-[2]',
                 )}
               >
-                <FilterBar
-                  all={all}
-                  pool={pool ?? all}
-                  filters={prefs.filters}
-                  onChange={setFilters}
-                  starCount={starCount}
-                  hiddenCount={hiddenCount}
-                />
-              </div>
-            )}
-            <div
-              ref={scroll}
-              className="min-h-0 flex-1 scroll-pt-3 overflow-auto overscroll-contain"
-            >
-              <span id="count" className="sr-only">
-                {all
-                  ? t('listingsCount', { n: fmt.num(all.length) })
-                  : t('appTitle')}
-              </span>
-              {pool && (
-                <ResultBar
-                  total={pool.length}
-                  shown={filtered.length}
-                  onlyHidden={onlyHidden}
-                  sort={prefs.sort}
-                  onSort={(sort) => setPrefs((p) => ({ ...p, sort }))}
-                />
-              )}
-              {!all && !error && <ListSkeleton />}
-              {all && filtered.length > 0 && (
-                <ResultList
-                  rows={filtered}
-                  total={filtered.length}
-                  limit={limit}
-                  onMore={onMore}
-                  multiDeal={multiDeal}
-                  onOpen={setDetailId}
-                  onHover={onHover}
-                  scrollRoot={scroll}
-                />
-              )}
-              {empty && (
-                <EmptyState
-                  kind={empty}
-                  message={error ?? undefined}
-                  onSearch={() => setDialog('search')}
-                  onClear={() => setFilters({ ...DEFAULT_FILTERS, q: '' })}
-                />
-              )}
-            </div>
-          </section>
-          <section
-            id="map"
-            tabIndex={-1}
-            aria-label={t('viewMap')}
-            className={cn(
-              'relative isolate min-h-0 bg-muted outline-none max-[1000px]:absolute max-[1000px]:inset-0',
-              narrow && view !== 'map' && 'invisible',
-              narrow &&
-                view === 'map' &&
-                'map-raised max-[1000px]:top-[var(--toolbar-h,0px)]',
-            )}
-          >
-            <ListingMap
-              ref={mapRef}
-              filtered={filtered}
-              hasHoods={hasHoods}
-              groupMode={prefs.groupMode}
-              baseLayer={prefs.baseLayer}
-              selectedPlace={prefs.filters.place}
-              unmappedActive={prefs.filters.unmapped}
-              drawnArea={prefs.filters.drawnArea}
-              onOpen={setDetailId}
-              onFilterPlace={(place) => {
-                setFilters({ place })
-                setView('list')
+                <a
+                  href="#map"
+                  className="absolute top-2 left-5 z-[5] -translate-y-[160%] rounded-full bg-primary px-3.5 py-2 font-semibold text-primary-foreground no-underline focus-visible:translate-y-0"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setView('map')
+                    document.getElementById('map')?.focus()
+                  }}
+                >
+                  {t('skipToMap')}
+                </a>
+                {all && all.length > 0 && (
+                  <div
+                    ref={toolbar}
+                    className={cn(
+                      'relative flex-none border-b px-5 pt-3.5 pb-3 max-[720px]:px-0 max-[720px]:py-2.5',
+                      narrow && view === 'map' && 'visible bg-background',
+                    )}
+                  >
+                    <FilterBar
+                      all={all}
+                      pool={pool ?? all}
+                      filters={prefs.filters}
+                      onChange={setFilters}
+                      starCount={starCount}
+                      hiddenCount={hiddenCount}
+                    />
+                  </div>
+                )}
+                <div
+                  ref={scroll}
+                  className="min-h-0 flex-1 scroll-pt-3 overflow-auto overscroll-contain"
+                >
+                  <span id="count" className="sr-only">
+                    {all
+                      ? t('listingsCount', { n: fmt.num(all.length) })
+                      : t('appTitle')}
+                  </span>
+                  {pool && (
+                    <ResultBar
+                      total={pool.length}
+                      shown={filtered.length}
+                      onlyHidden={onlyHidden}
+                      sort={prefs.sort}
+                      onSort={(sort) => setPrefs((p) => ({ ...p, sort }))}
+                    />
+                  )}
+                  {!all && !error && <ListSkeleton />}
+                  {all && filtered.length > 0 && (
+                    <ResultList
+                      rows={filtered}
+                      total={filtered.length}
+                      limit={limit}
+                      onMore={onMore}
+                      multiDeal={multiDeal}
+                      onOpen={setDetailId}
+                      onHover={onHover}
+                      scrollRoot={scroll}
+                    />
+                  )}
+                  {empty && (
+                    <EmptyState
+                      kind={empty}
+                      message={error ?? undefined}
+                      onSearch={() => setDialog('search')}
+                      onClear={() => setFilters({ ...DEFAULT_FILTERS, q: '' })}
+                    />
+                  )}
+                </div>
+              </section>
+            </ResizablePanel>
+            <ResizableHandle
+              withHandle
+              aria-label={t('resizePanes')}
+              onDoubleClick={() => {
+                saveJson('listWidth', null)
+                panes.current?.setLayout(paneLayout())
               }}
-              onToggleUnmapped={() =>
-                setFilters({ unmapped: !prefs.filters.unmapped })
-              }
-              onDrawnArea={(drawnArea) => setFilters({ drawnArea })}
-              onBaseLayer={(baseLayer) =>
-                setPrefs((p) => ({ ...p, baseLayer }))
-              }
-              onGroupMode={(groupMode) =>
-                setPrefs((p) => ({ ...p, groupMode }))
-              }
+              // No width of its own, so the panes stay whole pixels: the line
+              // is the list's last pixel, as its border was.
+              className={cn(
+                'z-10 w-0 touch-none after:w-2.5 max-[1000px]:hidden pointer-coarse:after:w-5',
+                'before:absolute before:inset-y-0 before:right-0 before:w-px before:bg-border data-[separator=active]:before:-right-px data-[separator=active]:before:w-0.5 data-[separator=active]:before:bg-border-strong data-[separator=hover]:before:-right-px data-[separator=hover]:before:w-0.5 data-[separator=hover]:before:bg-border-strong',
+                '*:h-8 *:w-1.5 *:bg-muted-foreground/60 *:opacity-0 *:transition-opacity focus-visible:*:bg-ring focus-visible:*:opacity-100 data-[separator=active]:*:opacity-100 data-[separator=hover]:*:opacity-100',
+              )}
             />
-          </section>
+            <ResizablePanel
+              id="map-pane"
+              minSize="360px"
+              className="touch-auto!"
+            >
+              <section
+                id="map"
+                tabIndex={-1}
+                aria-label={t('viewMap')}
+                className={cn(
+                  'relative isolate min-h-0 bg-muted outline-none max-[1000px]:absolute max-[1000px]:inset-0 min-[1001px]:h-full',
+                  narrow && view !== 'map' && 'invisible',
+                  narrow &&
+                    view === 'map' &&
+                    'map-raised max-[1000px]:top-[var(--toolbar-h,0px)]',
+                )}
+              >
+                <ListingMap
+                  ref={mapRef}
+                  filtered={filtered}
+                  hasHoods={hasHoods}
+                  groupMode={prefs.groupMode}
+                  baseLayer={prefs.baseLayer}
+                  selectedPlace={prefs.filters.place}
+                  unmappedActive={prefs.filters.unmapped}
+                  drawnArea={prefs.filters.drawnArea}
+                  onOpen={setDetailId}
+                  onFilterPlace={(place) => {
+                    setFilters({ place })
+                    setView('list')
+                  }}
+                  onToggleUnmapped={() =>
+                    setFilters({ unmapped: !prefs.filters.unmapped })
+                  }
+                  onDrawnArea={(drawnArea) => setFilters({ drawnArea })}
+                  onBaseLayer={(baseLayer) =>
+                    setPrefs((p) => ({ ...p, baseLayer }))
+                  }
+                  onGroupMode={(groupMode) =>
+                    setPrefs((p) => ({ ...p, groupMode }))
+                  }
+                />
+              </section>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </main>
         {narrow && (
           <button
