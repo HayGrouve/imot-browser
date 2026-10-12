@@ -28,6 +28,8 @@ export interface Resolved {
   nameBg: string
   code: string
   admin1: string
+  /** The municipality, e.g. "SOF46" (Столична); may be empty. */
+  admin2: string
   match: 'exact' | 'fuzzy' | 'anyOblast' | 'ambiguous'
 }
 
@@ -224,7 +226,7 @@ export class Gazetteer {
       second &&
       score(second, kind) === score(best, kind) &&
       Math.abs(second[3] - best[3]) + Math.abs(second[4] - best[4]) > 0.03
-    const [geonameId, nameEn, bg, lat, lon, adm1, , code] = best
+    const [geonameId, nameEn, bg, lat, lon, adm1, adm2, code] = best
     return {
       lat,
       lon,
@@ -233,6 +235,7 @@ export class Gazetteer {
       nameBg: bg.find((n) => key(n) === k) || bg[0] || clean,
       code,
       admin1: adm1,
+      admin2: adm2,
       match: tie ? 'ambiguous' : match,
     }
   }

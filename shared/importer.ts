@@ -4,11 +4,12 @@
 // offline gazetteer. Convex runs the steps (convex/importer.ts).
 
 import type { Gazetteer, Resolved } from './gazetteer'
-import { distKm, stripHoodPrefix } from './geocode'
+import { distKm, geocodeNeighborhood, stripHoodPrefix } from './geocode'
+import type { GeoPoint, NominatimSearch } from './geocode'
 import type { ListingFields, Nbhd, Place } from './types'
 
 // Bump when neighbourhood matching changes, so stored results are re-evaluated (from the cache).
-export const NBHD_VERSION = 2
+export const NBHD_VERSION = 3
 
 export const MANUAL_SOURCE = 'manual'
 
@@ -183,7 +184,10 @@ export interface OfflineLocation {
   cityHood: boolean
 }
 
-/** City quarters that GeoNames knows (often former villages, e.g. Симеоново); no network needed. */
+/**
+ * City quarters that GeoNames knows (often former villages, e.g. Симеоново); no network needed.
+ * A same-named village of the next municipality (Изгрев by Varna) is no quarter.
+ */
 function hoodOffline(
   g: Gazetteer,
   name: string,
@@ -193,6 +197,7 @@ function hoodOffline(
   if (!city) return null
   const r = g.resolve(stripHoodPrefix(name), oblast, 'other')
   if (!r || r.match !== 'exact' || distKm(r, city) > 20) return null
+  if (r.admin2 && city.admin2 && r.admin2 !== city.admin2) return null
   return { name, lat: r.lat, lon: r.lon, source: 'geonames', v: NBHD_VERSION }
 }
 
@@ -253,6 +258,31 @@ export function locateOffline(
         : null,
     cityHood,
   }
+}
+
+/**
+ * A big-city neighbourhood looked up online, as the import does it (and the districts file was
+ * built): kept to the city's own municipality, whose villages count (Бусманци for Sofia), while
+ * кв. Свобода of Поморие, 15 km from Burgas, doesn't. A far-off namesake of a part (the village
+ * Чайка of Провадия, for Varna's quarter Чайка) says nothing.
+ */
+export function lookupHood(
+  g: Gazetteer,
+  search: NominatimSearch,
+  hood: string,
+  city: string,
+  oblast: string | null,
+  center: GeoPoint | null,
+): Promise<GeoPoint | null> {
+  const own = g.resolve(city, oblast, 'city')
+  return geocodeNeighborhood(search, hood, city, center, {
+    inCity: (part, at) => {
+      const r = g.resolve(part, oblast, 'other')
+      if (r?.match !== 'exact' || !r.admin2 || !own?.admin2) return null
+      if (r.admin2 === own.admin2) return true
+      return distKm(r, at) <= 5 ? false : null
+    },
+  })
 }
 
 /**
