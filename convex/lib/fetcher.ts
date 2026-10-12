@@ -1,30 +1,33 @@
 // Polite HTTP client for imot.bg: global request spacing, bounded concurrency,
 // retries with backoff, windows-1251 decoding and Cloudflare-block detection.
-// Used from "use node" actions (the V8 runtime has no windows-1251 decoder).
+// Used from "use node" actions (the V8 runtime has no windows-1251 decoder) and
+// from scripts/build-districts.mjs (Node strips the types, so no parameter properties).
 
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36'
 
 export class BlockedError extends Error {
   code = 'blocked'
-  constructor(
-    public status: number,
-    public url: string,
-  ) {
+  status: number
+  url: string
+  constructor(status: number, url: string) {
     super(
       `imot.bg refused the request (HTTP ${status}), likely rate limiting or a Cloudflare challenge`,
     )
+    this.status = status
+    this.url = url
   }
 }
 
 export class HttpError extends Error {
   code: string
-  constructor(
-    public status: number,
-    public url: string,
-  ) {
+  status: number
+  url: string
+  constructor(status: number, url: string) {
     super(`HTTP ${status} for ${url}`)
     this.code = status === 404 ? 'notFound' : 'http'
+    this.status = status
+    this.url = url
   }
 }
 

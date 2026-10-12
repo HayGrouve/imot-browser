@@ -18,6 +18,7 @@
     "check": "prettier --check .",
     "format": "prettier --write . && eslint --fix",
     "gazetteer": "node scripts/build-gazetteer.mjs",
+    "districts": "node scripts/build-districts.mjs",
     "ci:preflight": "node scripts/ci-preflight.mjs"
   },
   "packageManager": "pnpm@10.33.0",

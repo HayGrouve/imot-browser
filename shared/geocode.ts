@@ -6,7 +6,15 @@
 import { fuzzyKey } from './text'
 
 export const NOMINATIM_ENDPOINT = 'https://nominatim.openstreetmap.org/search'
-const BG_BBOX = { minLat: 41.2, maxLat: 44.25, minLon: 22.3, maxLon: 28.7 }
+/** Nominatim's usage policy asks for an identifying User-Agent. */
+export const NOMINATIM_UA =
+  'onova-za-imotite/1.0 (+https://github.com/HayGrouve/onova-za-imotite)'
+export const BG_BBOX = {
+  minLat: 41.2,
+  maxLat: 44.25,
+  minLon: 22.3,
+  maxLon: 28.7,
+}
 
 export interface NominatimHit {
   lat: number
