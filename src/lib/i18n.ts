@@ -369,6 +369,8 @@ const STRINGS = {
       'imot.bg refused further requests (rate limit or bot protection). Wait a while and re-import; already collected listings were saved.',
     err_searchNotFound: 'imot.bg answered “page not found” for this search.',
 
+    municipality: '{name} municipality',
+    municipalityShort: '{name}',
     phase_queued: 'Waiting for another import to finish',
     queueAhead: '{n} imports ahead',
     queueAhead_one: '1 import ahead',
@@ -779,6 +781,8 @@ const STRINGS = {
     err_searchNotFound:
       'imot.bg върна „страницата не е намерена“ за това търсене.',
 
+    municipality: 'общ. {name}',
+    municipalityShort: 'общ. {name}',
     phase_queued: 'Изчаква друг импорт да приключи',
     queueAhead: 'Преди него: {n}',
     queueAhead_one: 'Преди него: 1',

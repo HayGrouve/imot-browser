@@ -113,7 +113,7 @@ export function JobView({ job }: { job: Job | null | undefined }) {
     ])
       if (typeof params[k] === 'number') params[k] = fmt.num(params[k])
     return {
-      key: `${e.t}-${e.code}`,
+      key: e.id,
       level: String(e.params.level ?? ''),
       text: t(`log_${e.code}`, params),
     }

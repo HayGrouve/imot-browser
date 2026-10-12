@@ -112,13 +112,13 @@ function groupTitle(g: Group, lang: AppContextValue['lang']) {
   return g.hood ? `${hoodName(g.hood, lang)}, ${base}` : base
 }
 
-function groupSub(g: Group, lang: AppContextValue['lang']) {
+function groupSub(g: Group, { t, lang }: Pick<AppContextValue, 't' | 'lang'>) {
   const p = g.place
   const kind = lang === 'en' && p.kind && !g.hood ? KIND_EN[p.kind] : ''
   const muni = p.municipality
-    ? lang === 'bg'
-      ? `общ. ${p.municipality}`
-      : `${transliterate(p.municipality)} municipality`
+    ? t('municipality', {
+        name: lang === 'bg' ? p.municipality : transliterate(p.municipality),
+      })
     : ''
   return [kind, muni, oblastLabel(p.oblast, lang)].filter(Boolean).join(', ')
 }
@@ -159,7 +159,7 @@ function popupHtml(
   const n = g.items.length
   return `<div class="pop">
 <div class="pop-title">${esc(groupTitle(g, lang))}</div>
-<div class="pop-sub">${esc(groupSub(g, lang))}</div>
+<div class="pop-sub">${esc(groupSub(g, { t, lang }))}</div>
 <div class="pop-stats">
   <div><b>${esc(fmt.num(n))}</b><span>${esc(t('statListings', { n }))}</span></div>
   ${g.medPrice != null ? `<div><b>${esc(fmt.money(g.medPrice))}</b><span>${esc(t('statMedian'))}</span></div>` : ''}
@@ -361,7 +361,9 @@ export function ListingMap({
       noData: list.some((g) => g.medPpm == null),
       unmapped,
     })
-    if (!fitted.current && list.length) {
+    // Fit once to the first listings, and again after the map was emptied (data deleted).
+    if (!list.length) fitted.current = false
+    else if (!fitted.current) {
       fitted.current = true
       fitTo(state, list)
     }

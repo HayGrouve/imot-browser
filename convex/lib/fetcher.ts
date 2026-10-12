@@ -28,6 +28,11 @@ export class HttpError extends Error {
   }
 }
 
+/** A page that takes longer than this is given up on (and retried). */
+const REQUEST_TIMEOUT_MS = 30_000
+/** imot.bg's Retry-After is honoured up to this: an import step has to finish in minutes. */
+const MAX_RETRY_WAIT_MS = 30_000
+
 const sleep = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     if (signal?.aborted) {
@@ -148,10 +153,13 @@ export class Fetcher {
       let body: string
       try {
         this.requests++
+        const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
         res = await fetch(url, {
           method,
           body: payload,
-          signal: this.signal,
+          signal: this.signal
+            ? AbortSignal.any([this.signal, timeout])
+            : timeout,
           redirect: 'follow',
           headers: {
             'User-Agent': USER_AGENT,
@@ -187,9 +195,12 @@ export class Fetcher {
         }
         const retryAfter = Number(res.headers.get('retry-after'))
         await sleep(
-          Number.isFinite(retryAfter) && retryAfter > 0
-            ? retryAfter * 1000
-            : 2000 * 2 ** (attempt - 1),
+          Math.min(
+            MAX_RETRY_WAIT_MS,
+            Number.isFinite(retryAfter) && retryAfter > 0
+              ? retryAfter * 1000
+              : 2000 * 2 ** (attempt - 1),
+          ),
           this.signal,
         )
         continue

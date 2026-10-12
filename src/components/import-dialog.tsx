@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation } from 'convex/react'
 import {
   ArrowClockwiseIcon,
@@ -109,6 +109,7 @@ export function ImportDialog({
   onOptions,
   sources,
   all,
+  deleting,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -117,6 +118,8 @@ export function ImportDialog({
   onOptions: (o: ImportOptions) => void
   sources: Array<Source>
   all: Array<Listing> | null
+  /** "Delete all data" or a removed search is still being deleted. */
+  deleting: boolean
 }) {
   const { t, fmt, workspace } = useApp()
   const [text, setText] = useState('')
@@ -130,6 +133,12 @@ export function ImportDialog({
   const removeSource = useMutation(api.sources.remove)
   const removeAll = useMutation(api.listings.removeAll)
   const running = jobRunning(job)
+  const busy = running || deleting
+
+  // An old error shouldn't hide a later import (one started from the search dialog, say).
+  useEffect(() => {
+    if (open) setError(null)
+  }, [open, job?.id])
 
   const counts = useMemo(
     () =>
@@ -193,7 +202,7 @@ export function ImportDialog({
             <div className="flex items-center gap-2">
               <Button
                 size="lg"
-                disabled={running}
+                disabled={busy}
                 onClick={() => {
                   if (!text.trim()) {
                     input.current?.focus()
@@ -232,7 +241,7 @@ export function ImportDialog({
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={running}
+                  disabled={busy}
                   onClick={() =>
                     void run(
                       list
@@ -311,7 +320,7 @@ export function ImportDialog({
                           <Button
                             size="icon-sm"
                             variant="ghost"
-                            disabled={running}
+                            disabled={busy}
                             className="text-muted-foreground hover:text-foreground"
                             title={t('reimport')}
                             aria-label={`${t('reimport')}: ${name}`}
@@ -323,7 +332,7 @@ export function ImportDialog({
                         <Button
                           size="icon-sm"
                           variant="ghost"
-                          disabled={running}
+                          disabled={busy}
                           className="text-muted-foreground hover:text-destructive"
                           title={t('removeSource')}
                           aria-label={`${t('removeSource')}: ${name}`}
@@ -342,13 +351,13 @@ export function ImportDialog({
           </section>
           <div className="flex items-center justify-between gap-4 border-t pt-5 max-[560px]:flex-col max-[560px]:items-start max-[560px]:gap-2.5">
             <p className="m-0 max-w-[56ch] text-[12.5px] text-muted-foreground">
-              {t('deleteAllHint')}
+              {deleting ? t('deleting') : t('deleteAllHint')}
             </p>
             <Button
               size="sm"
               variant="ghost"
               className="flex-none text-destructive max-[560px]:-ml-3"
-              disabled={running || !all?.length}
+              disabled={busy || !all?.length}
               onClick={() => setConfirm({ kind: 'all' })}
             >
               <TrashIcon aria-hidden="true" />

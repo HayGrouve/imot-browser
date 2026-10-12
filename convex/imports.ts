@@ -97,7 +97,9 @@ export const current = query({
       inputs: job.inputs,
       searchUrl: job.searchUrl ?? null,
       ahead,
-      log: log.reverse().map(({ t, code, params }) => ({ t, code, params })),
+      log: log
+        .reverse()
+        .map(({ _id, t, code, params }) => ({ id: _id, t, code, params })),
     }
   },
 })
@@ -167,6 +169,10 @@ async function enqueue(
     detailFailures: 0,
     cancelRequested: false,
     ...(searchUrl ? { searchUrl } : {}),
+  })
+  await ctx.scheduler.runAfter(0, internal.imports.dropOldLogs, {
+    workspace,
+    keep: id,
   })
   await claimNext(ctx)
   return id
@@ -240,18 +246,52 @@ async function addLog(
   job: Id<'imports'>,
   lines: Array<{ code: string; params: LogParams; t?: number }>,
 ) {
+  if (!lines.length) return
   for (const { code, params, t } of lines)
     await ctx.db.insert('importLogs', { job, t: t ?? Date.now(), code, params })
-  if (!lines.length) return
-  // Keep the newest LOG_MAX lines.
-  const old = await ctx.db
-    .query('importLogs')
-    .withIndex('by_job', (q) => q.eq('job', job))
-    .order('desc')
-    .collect()
-  for (const row of old.slice(LOG_MAX))
-    await ctx.db.delete('importLogs', row._id)
+  // Keep the newest LOG_MAX lines; the job counts them, so only the excess is read.
+  const doc = await ctx.db.get('imports', job)
+  const count = (doc?.logCount ?? 0) + lines.length
+  if (count > LOG_MAX) {
+    const old = await ctx.db
+      .query('importLogs')
+      .withIndex('by_job', (q) => q.eq('job', job))
+      .order('asc')
+      .take(count - LOG_MAX)
+    for (const row of old) await ctx.db.delete('importLogs', row._id)
+  }
+  if (doc)
+    await ctx.db.patch('imports', job, { logCount: Math.min(count, LOG_MAX) })
 }
+
+/** Only a workspace's latest import shows its log: earlier imports' lines go. */
+export const dropOldLogs = internalMutation({
+  args: { workspace: v.string(), keep: v.id('imports') },
+  returns: v.null(),
+  handler: async (ctx, { workspace, keep }) => {
+    const jobs = await ctx.db
+      .query('imports')
+      .withIndex('by_workspace', (q) => q.eq('workspace', workspace))
+      .collect()
+    let more = false
+    for (const job of jobs) {
+      if (job._id === keep || !job.logCount) continue
+      const rows = await ctx.db
+        .query('importLogs')
+        .withIndex('by_job', (q) => q.eq('job', job._id))
+        .take(400)
+      for (const row of rows) await ctx.db.delete('importLogs', row._id)
+      if (rows.length === 400) more = true
+      else await ctx.db.patch('imports', job._id, { logCount: 0 })
+    }
+    if (more)
+      await ctx.scheduler.runAfter(0, internal.imports.dropOldLogs, {
+        workspace,
+        keep,
+      })
+    return null
+  },
+})
 
 const logLineV = v.object({
   t: v.number(),
@@ -315,7 +355,7 @@ export const report = internalMutation({
 
 const cardV = v.object({
   fields: listingFieldsV,
-  source: v.string(),
+  sources: v.array(v.string()),
   manual: v.boolean(),
   offline: offlineV,
 })
@@ -382,6 +422,7 @@ export const saveCards = internalMutation({
 })
 
 const sourceV = v.object({
+  partial: v.boolean(),
   key: v.string(),
   url: v.string(),
   input: v.string(),
@@ -395,10 +436,13 @@ const sourceV = v.object({
 async function upsertSource(
   ctx: MutationCtx,
   job: Doc<'imports'>,
-  src: Omit<
+  {
+    partial,
+    ...src
+  }: Omit<
     Doc<'sources'>,
     '_id' | '_creationTime' | 'workspace' | 'lastImportAt' | 'prevImportAt'
-  >,
+  > & { partial: boolean },
 ) {
   const prev = await ctx.db
     .query('sources')
@@ -414,6 +458,9 @@ async function upsertSource(
     })
     return
   }
+  // A search that stopped early keeps what its last complete import recorded:
+  // otherwise its unread listings would look removed ("no longer listed").
+  if (partial) return
   // Remember the previous import so the UI can flag listings that are new since then.
   await ctx.db.patch('sources', prev._id, {
     ...src,
@@ -443,6 +490,7 @@ export const afterSearch = internalMutation({
     for (const src of args.sources) await upsertSource(ctx, job, src)
     if (args.manual)
       await upsertSource(ctx, job, {
+        partial: false,
         key: MANUAL_SOURCE,
         url: null,
         input: 'manual',

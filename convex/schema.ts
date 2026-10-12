@@ -85,6 +85,8 @@ export default defineSchema({
     progress: progressV,
     result: resultV,
     warnings: v.number(),
+    /** Lines in importLogs for this import (kept to the newest 300). */
+    logCount: v.optional(v.number()),
     /** Listing pages that could not be read (the first 5 are logged). */
     detailFailures: v.number(),
     error: v.optional(v.object({ code: v.string(), message: v.string() })),

@@ -30,6 +30,7 @@ export const remove = mutation({
     checkWorkspace(workspace)
     const ws = await findWorkspace(ctx, workspace)
     if (!ws) return null
+    if (ws.deleting) fail('deleting')
     if (isActive(await latestJob(ctx, workspace))) fail('busy')
     const row = await ctx.db
       .query('sources')

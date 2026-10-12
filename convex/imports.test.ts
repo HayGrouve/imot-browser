@@ -47,7 +47,7 @@ function card(
       agency: { name: 'АГЕНЦИЯ', url: null, logo: null },
       ...extra,
     },
-    source,
+    sources: [source],
     manual: false,
     offline: null,
   }
@@ -234,7 +234,7 @@ describe('saving listings', () => {
       cards: [
         {
           fields: { id: '1b2', url },
-          source: 'manual',
+          sources: ['manual'],
           manual: true,
           offline: null,
         },
@@ -269,6 +269,7 @@ describe('saving listings', () => {
       job: id,
       sources: [
         {
+          partial: false,
           key: 'src1',
           url: SEARCH,
           input: SEARCH,
@@ -297,6 +298,54 @@ describe('saving listings', () => {
       outcome: 'ok',
     })
     expect((await job(t, other)).phase).toBe('geocode')
+  })
+
+  test('a listing found by two searches of one import keeps both', async () => {
+    const t = setupConvex()
+    const id = await startJob(t)
+    await t.mutation(internal.imports.saveCards, {
+      job: id,
+      cards: [{ ...card('1a1'), sources: ['srcA', 'srcB'] }],
+    })
+    const [row] = await listings(t)
+    expect(row.sources).toEqual(['srcA', 'srcB'])
+  })
+
+  test('a search that stops early keeps what its last complete import recorded', async () => {
+    const t = setupConvex()
+    const src = {
+      partial: false,
+      key: 'src1',
+      url: SEARCH,
+      input: SEARCH,
+      paramsText: 'КЪЩА',
+      total: 5,
+      capped: false,
+      found: 5,
+      splits: 0,
+    }
+    const first = await startJob(t)
+    await t.mutation(internal.imports.afterSearch, {
+      job: first,
+      sources: [src],
+      manual: false,
+      outcome: 'ok',
+    })
+    await t.mutation(internal.imports.finish, { job: first, status: 'done' })
+    vi.setSystemTime(new Date('2026-10-13T10:00:00Z'))
+    const second = await startJob(t)
+    await t.mutation(internal.imports.afterSearch, {
+      job: second,
+      sources: [{ ...src, partial: true, found: 0, paramsText: '' }],
+      manual: false,
+      outcome: 'ok',
+    })
+    const [row] = await t.query(api.sources.list, { workspace: WS })
+    expect(row).toMatchObject({
+      found: 5,
+      paramsText: 'КЪЩА',
+      lastImportAt: '2026-10-12T10:00:00.000Z',
+    })
   })
 
   test('a blocked search keeps what it collected and reports the reason', async () => {
@@ -373,6 +422,12 @@ describe('removing data', () => {
     const t = setupConvex()
     await seed(t)
     await t.mutation(api.sources.remove, { workspace: WS, key: 'src1' })
+    // One deletion at a time: a second one waits for the first to finish.
+    expect(
+      await errorCodeOf(
+        t.mutation(api.sources.remove, { workspace: WS, key: 'src2' }),
+      ),
+    ).toBe('deleting')
     await t.finishAllScheduledFunctions(vi.runAllTimers)
     const rows = await listings(t)
     expect(rows.map((r) => [r.imotId, r.sources])).toEqual([['1a2', ['src2']]])

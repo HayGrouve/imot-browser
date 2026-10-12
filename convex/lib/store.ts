@@ -71,7 +71,8 @@ export async function removeListing(ctx: MutationCtx, row: Doc<'listings'>) {
 
 export interface Card {
   fields: ListingFieldsValue
-  source: string
+  /** The searches (or `manual`) that found it in this import. */
+  sources: Array<string>
   manual: boolean
   offline: Offline
 }
@@ -127,7 +128,7 @@ export async function saveCard(
     nbhd: location.nbhd,
     firstSeen: prev?.firstSeen ?? job.now,
     lastSeen: job.now,
-    sources: [...new Set([...(prev?.sources ?? []), card.source])],
+    sources: [...new Set([...(prev?.sources ?? []), ...card.sources])],
     priceHistory: nextPriceHistory(
       prev?.priceHistory ?? [],
       slim.price,

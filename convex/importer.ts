@@ -185,6 +185,8 @@ async function finish(
 // ---------------------------------------------------------------- step 1: search pages
 
 interface SourceRecord {
+  /** The search stopped early: its page count and totals are incomplete. */
+  partial: boolean
   key: string
   url: string
   input: string
@@ -234,20 +236,28 @@ export const runSearch = internalAction({
       return parsed
     }
 
+    // Listings each search found (one listing can be in several searches of an import).
+    const seen = new Map<string, Set<string>>()
     const addCards = (src: SourceRecord, items: Array<ListingFields>) => {
+      let mine = seen.get(src.key)
+      if (!mine) seen.set(src.key, (mine = new Set()))
       for (const item of items) {
-        if (full() && !cards.has(item.id)) {
+        const prev = cards.get(item.id)
+        if (full() && !prev) {
           if (!maxWarned) {
             r.warn('maxListings', { max: MAX_LISTINGS })
             maxWarned = true
           }
           return
         }
-        if (!cards.has(item.id)) src.found++
+        if (!mine.has(item.id)) {
+          mine.add(item.id)
+          src.found++
+        }
         cards.set(item.id, {
           fields: item,
-          source: src.key,
-          manual: false,
+          sources: [...new Set([...(prev?.sources ?? []), src.key])],
+          manual: prev?.manual ?? false,
           offline: null,
         })
       }
@@ -335,17 +345,18 @@ export const runSearch = internalAction({
           r.add('sessionParamRemoved', { input: entry.input })
         if (c.kind === 'listing' && c.id) {
           manual = true
-          if (!cards.has(c.id))
-            cards.set(c.id, {
-              fields: { id: c.id, url: c.url },
-              source: MANUAL_SOURCE,
-              manual: true,
-              offline: null,
-            })
+          const prev = cards.get(c.id)
+          cards.set(c.id, {
+            fields: prev?.fields ?? { id: c.id, url: c.url },
+            sources: [...new Set([...(prev?.sources ?? []), MANUAL_SOURCE])],
+            manual: true,
+            offline: null,
+          })
           sync()
           continue
         }
         const src: SourceRecord = {
+          partial: false,
           key: sourceKeyFor(c.url),
           url: c.url,
           input: entry.input,
@@ -355,20 +366,28 @@ export const runSearch = internalAction({
           found: 0,
           splits: 0,
         }
+        // A search that stops early still names its listings' source, but must not
+        // overwrite what an earlier complete import recorded (afterSearch).
+        let stop: unknown = null
         try {
           await collectSearch(src)
         } catch (err) {
-          if (codeOf(err) === 'blocked' || r.cancelled) throw err
-          src.error =
-            typeof codeOf(err) === 'string' ? (codeOf(err) as string) : 'error'
-          r.warn('searchFailed', {
-            input: entry.input,
-            message: messageOf(err),
-          })
+          src.partial = true
+          if (codeOf(err) === 'blocked' || r.cancelled) stop = err
+          else {
+            src.error =
+              typeof codeOf(err) === 'string'
+                ? (codeOf(err) as string)
+                : 'error'
+            r.warn('searchFailed', {
+              input: entry.input,
+              message: messageOf(err),
+            })
+          }
         }
-        if (!src.found && !src.error)
+        if (!stop && !src.found && !src.error)
           r.warn('noResults', { input: entry.input })
-        if (src.capped && src.splits)
+        if (!stop && src.capped && src.splits)
           r.add('splitApplied', {
             input: entry.input,
             splits: src.splits,
@@ -377,6 +396,7 @@ export const runSearch = internalAction({
         sources.push(src)
         inputs[i] = { ...entry, paramsText: src.paramsText }
         r.setInputs(inputs)
+        if (stop) throw stop
       }
     } catch (err) {
       failure = r.cancelled ? new Cancelled() : err
@@ -477,6 +497,8 @@ export const runDetails = internalAction({
               return
             }
             const merged = mergeDetail(it.card, d)
+            // Keyed by the ID it was imported under, whatever the page says.
+            merged.id = it.card.id
             merged.detailsFetchedAt = job.now
             merged.descriptionFull = !!d.description
             if (!merged.thumb && merged.photos?.length)
@@ -614,11 +636,14 @@ export const runGeocode = internalAction({
         last = Date.now()
         const res = await fetch(nominatimUrl(query), {
           headers: { 'User-Agent': NOMINATIM_UA, Accept: 'application/json' },
-          signal: r.abort.signal,
+          signal: AbortSignal.any([
+            r.abort.signal,
+            AbortSignal.timeout(30_000),
+          ]),
         })
-        if (res.status === 429 || res.status >= 500)
-          throw new Error(`Nominatim HTTP ${res.status}`)
-        const results = res.ok ? parseNominatim(await res.json()) : []
+        // Only real answers are cached: a refusal or an error is tried again next time.
+        if (!res.ok) throw new Error(`Nominatim HTTP ${res.status}`)
+        const results = parseNominatim(await res.json())
         await ctx.runMutation(internal.geocache.put, { query, results })
         return results
       }

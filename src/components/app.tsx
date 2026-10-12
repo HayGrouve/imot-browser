@@ -114,6 +114,8 @@ export function App() {
   >(null)
   const [limit, setLimit] = useState(PAGE)
   const mapRef = useRef<MapHandle>(null)
+  // "Show listings" right after an import: fit again when its listings arrive.
+  const fitRequested = useRef(0)
   const scroll = useRef<HTMLDivElement>(null)
   const toolbar = useRef<HTMLDivElement>(null)
   const narrow = useMedia('(max-width: 1000px)')
@@ -126,7 +128,12 @@ export function App() {
   )
   const fmt = useMemo(() => makeFormat(lang), [lang])
 
-  const { listings: raw, sources, error } = useWorkspaceData(workspace)
+  const {
+    listings: raw,
+    sources,
+    error,
+    deleting,
+  } = useWorkspaceData(workspace)
   const job = useQuery(api.imports.current, { workspace })
   const sourceMap = useMemo(
     () => new Map(sources.map((s) => [s.key, s])),
@@ -160,6 +167,10 @@ export function App() {
     () => (all ?? []).reduce((n, l) => n + (stars.has(l.id) ? 1 : 0), 0),
     [all, stars],
   )
+
+  useEffect(() => {
+    if (Date.now() - fitRequested.current < 5000) mapRef.current?.fit()
+  }, [all])
 
   useEffect(() => {
     document.documentElement.lang = lang
@@ -217,7 +228,10 @@ export function App() {
   // Narrow screens show one pane at a time; the map starts below the filter row.
   useEffect(() => {
     const el = toolbar.current
-    if (!el) return
+    if (!el) {
+      document.body.style.setProperty('--toolbar-h', '0px')
+      return
+    }
     const ro = new ResizeObserver(() =>
       document.body.style.setProperty('--toolbar-h', `${el.offsetHeight}px`),
     )
@@ -289,37 +303,37 @@ export function App() {
           <section
             aria-labelledby="count"
             className={cn(
-              '@container flex min-h-0 flex-col bg-background max-[1000px]:absolute max-[1000px]:inset-0 min-[1001px]:border-r',
+              '@container flex min-h-0 flex-col bg-background max-[1000px]:absolute max-[1000px]:inset-0 min-[1001px]:relative min-[1001px]:border-r',
               narrow && view === 'map' && 'invisible z-[2]',
             )}
           >
-            <div
-              ref={toolbar}
-              className={cn(
-                'relative flex-none border-b px-5 pt-3.5 pb-3 empty:hidden max-[720px]:px-0 max-[720px]:py-2.5',
-                narrow && view === 'map' && 'visible bg-background',
-              )}
+            <a
+              href="#map"
+              className="absolute top-2 left-5 z-[5] -translate-y-[160%] rounded-full bg-primary px-3.5 py-2 font-semibold text-primary-foreground no-underline focus-visible:translate-y-0"
+              onClick={(e) => {
+                e.preventDefault()
+                setView('map')
+                document.getElementById('map')?.focus()
+              }}
             >
-              <a
-                href="#map"
-                className="absolute top-2 left-5 z-[5] -translate-y-[160%] rounded-full bg-primary px-3.5 py-2 font-semibold text-primary-foreground no-underline focus-visible:translate-y-0"
-                onClick={(e) => {
-                  e.preventDefault()
-                  setView('map')
-                  document.getElementById('map')?.focus()
-                }}
+              {t('skipToMap')}
+            </a>
+            {all && all.length > 0 && (
+              <div
+                ref={toolbar}
+                className={cn(
+                  'relative flex-none border-b px-5 pt-3.5 pb-3 max-[720px]:px-0 max-[720px]:py-2.5',
+                  narrow && view === 'map' && 'visible bg-background',
+                )}
               >
-                {t('skipToMap')}
-              </a>
-              {all && (
                 <FilterBar
                   all={all}
                   filters={prefs.filters}
                   onChange={setFilters}
                   starCount={starCount}
                 />
-              )}
-            </div>
+              </div>
+            )}
             <div
               ref={scroll}
               className="min-h-0 flex-1 scroll-pt-3 overflow-auto overscroll-contain"
@@ -441,6 +455,7 @@ export function App() {
         onOptions={setOptions}
         sources={sources}
         all={all}
+        deleting={deleting}
       />
       <SearchDialog
         open={dialog === 'search'}
@@ -451,6 +466,7 @@ export function App() {
         onShowListings={() => {
           setView('list')
           mapRef.current?.fit()
+          fitRequested.current = Date.now()
         }}
       />
       <AboutDialog

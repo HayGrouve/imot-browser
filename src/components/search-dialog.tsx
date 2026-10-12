@@ -117,7 +117,8 @@ export function SearchDialog({
       if (loadKey.current !== key) return
       loadKey.current = null
       setLoading(null)
-      setSq((q) => adaptQuery({ ...q, deal, location }, prev, next))
+      // The place the user has chosen by now wins over the one this form was loaded for.
+      setSq((q) => adaptQuery(q, prev, next))
       setForm(next)
     } catch (err) {
       if (loadKey.current !== key) return
@@ -214,6 +215,12 @@ export function SearchDialog({
     }
   }
 
+  // Closing (× , Esc or the backdrop) returns to the form unless an import is running.
+  const setOpen = (o: boolean) => {
+    onOpenChange(o)
+    if (!o && !running) setView('form')
+  }
+
   const jobView = view === 'job'
   const msg: Note = jobView
     ? null
@@ -231,13 +238,7 @@ export function SearchDialog({
   const link = safeUrl(url)
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        onOpenChange(o)
-        if (!o && !running) setView('form')
-      }}
-    >
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent
         showCloseButton={false}
         aria-labelledby="searchTitle"
@@ -246,7 +247,7 @@ export function SearchDialog({
         <DialogHead
           id="searchTitle"
           title={t('searchImot')}
-          onClose={() => onOpenChange(false)}
+          onClose={() => setOpen(false)}
         />
         {!jobView ? (
           <form

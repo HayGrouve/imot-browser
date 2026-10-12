@@ -81,6 +81,7 @@ export const removeAll = mutation({
     checkWorkspace(workspace)
     const ws = await findWorkspace(ctx, workspace)
     if (!ws) return null
+    if (ws.deleting) fail('deleting')
     if (isActive(await latestJob(ctx, workspace))) fail('busy')
     await ctx.db.patch('workspaces', ws._id, { deleting: true })
     await ctx.scheduler.runAfter(0, internal.listings.deleteBatch, {

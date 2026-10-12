@@ -30,6 +30,7 @@ import {
 import type { Filters, Listing, PillKey } from '#/lib/listings'
 import { hoodName, listingPlace, oblastLabel, KIND_EN } from '#/lib/labels'
 import { searchKey, transliterate } from '../../shared/text'
+import { translate } from '#/lib/i18n'
 import { dealLabel, typeLabel } from '../../shared/vocab'
 import type { Lang } from '../../shared/vocab'
 
@@ -58,9 +59,12 @@ function usePlaceLabels(all: Array<Listing>, lang: Lang) {
       const extra = lang === 'en' && l.place.kind ? KIND_EN[l.place.kind] : null
       const muni =
         l.place.municipality && l.place.municipality !== l.place.name
-          ? lang === 'bg'
-            ? `общ. ${l.place.municipality}`
-            : transliterate(l.place.municipality)
+          ? translate(lang, 'municipalityShort', {
+              name:
+                lang === 'bg'
+                  ? l.place.municipality
+                  : transliterate(l.place.municipality),
+            })
           : null
       return `${label} (${[extra, muni || oblastLabel(l.oblast, lang)].filter(Boolean).join(', ')})`
     }
