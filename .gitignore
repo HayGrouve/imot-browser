@@ -1,4 +1,24 @@
-node_modules/
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+.env
+.env*
+.nitro
+.tanstack
+.output
+.vinxi
+
+# Vercel
+.vercel
+
+# Windows alternate data streams
+*:Zone.Identifier
+
+# Local git worktrees
+.worktrees/
+
+# Data of the retired local server (v1-local)
 data/
 *.tmp
-.DS_Store
