@@ -10,6 +10,9 @@ export interface AppContextValue {
   workspace: string
   stars: ReadonlySet<string>
   toggleStar: (id: string) => void
+  hidden: ReadonlySet<string>
+  /** Hide a listing from the results, or show it again (with an undo toast). */
+  toggleHidden: (id: string) => void
   notes: Readonly<Record<string, string>>
   setNote: (id: string, text: string) => void
 }

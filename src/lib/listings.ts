@@ -71,6 +71,8 @@ export interface Filters {
   onlyNew: boolean
   hideStale: boolean
   unmapped: boolean
+  /** Show the listings the reader hid, instead of the others. */
+  hidden: boolean
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -88,6 +90,7 @@ export const DEFAULT_FILTERS: Filters = {
   onlyNew: false,
   hideStale: false,
   unmapped: false,
+  hidden: false,
 }
 
 export function typeValue(l: Pick<Listing, 'type' | 'typeBg'>): string {
@@ -135,6 +138,15 @@ export function matchesPlace(l: Listing, key: string): boolean {
   return l.place?.key === key
 }
 
+/** The listings the filters pick from: the hidden ones, or all the others. */
+export function poolOf(
+  list: Array<Listing>,
+  hidden: ReadonlySet<string>,
+  onlyHidden: boolean,
+): Array<Listing> {
+  return list.filter((l) => hidden.has(l.id) === onlyHidden)
+}
+
 export function applyFilters(
   list: Array<Listing>,
   f: Filters,
@@ -171,7 +183,7 @@ export const PILLS = {
   location: ['place', 'oblast'],
   price: ['priceMin', 'priceMax'],
   size: ['areaMin', 'areaMax', 'yardMin'],
-  more: ['onlyNew', 'hideStale', 'unmapped'],
+  more: ['onlyNew', 'hideStale', 'unmapped', 'hidden'],
 } as const satisfies Record<string, ReadonlyArray<keyof Filters>>
 
 export type PillKey = keyof typeof PILLS

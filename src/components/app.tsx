@@ -33,6 +33,7 @@ import { download, toCsv } from '#/lib/csv'
 import {
   DEFAULT_FILTERS,
   applyFilters,
+  poolOf,
   prepare,
   sortListings,
   validSort,
@@ -97,6 +98,11 @@ export function App() {
     () => new Set(loadJson<Array<string>>('stars', [])),
     (s) => [...s],
   )
+  const [hidden, setHidden] = usePersisted(
+    'hidden',
+    () => new Set(loadJson<Array<string>>('hidden', [])),
+    (s) => [...s],
+  )
   const [notes, setNotes] = usePersisted('notes', () =>
     loadJson<Record<string, string>>('notes', {}),
   )
@@ -143,17 +149,22 @@ export function App() {
     () => (raw ? raw.map((l) => prepare(l, sourceMap)) : null),
     [raw, sourceMap],
   )
+  const onlyHidden = prefs.filters.hidden
+  const pool = useMemo(
+    () => (all ? poolOf(all, hidden, onlyHidden) : null),
+    [all, hidden, onlyHidden],
+  )
   const starsForFilter = prefs.filters.starred ? stars : NO_STARS
   const filtered = useMemo(
     () =>
-      all
+      pool
         ? sortListings(
-            applyFilters(all, prefs.filters, starsForFilter),
+            applyFilters(pool, prefs.filters, starsForFilter),
             prefs.sort,
             lang,
           )
         : [],
-    [all, prefs.filters, starsForFilter, prefs.sort, lang],
+    [pool, prefs.filters, starsForFilter, prefs.sort, lang],
   )
   const multiDeal = useMemo(
     () => new Set((all ?? []).map((l) => l.deal)).size > 1,
@@ -164,8 +175,12 @@ export function App() {
     [all],
   )
   const starCount = useMemo(
-    () => (all ?? []).reduce((n, l) => n + (stars.has(l.id) ? 1 : 0), 0),
-    [all, stars],
+    () => (pool ?? []).reduce((n, l) => n + (stars.has(l.id) ? 1 : 0), 0),
+    [pool, stars],
+  )
+  const hiddenCount = useMemo(
+    () => (all ?? []).reduce((n, l) => n + (hidden.has(l.id) ? 1 : 0), 0),
+    [all, hidden],
   )
 
   useEffect(() => {
@@ -192,6 +207,27 @@ export function App() {
       }),
     [setStars],
   )
+  const setHiddenOne = useCallback(
+    (id: string, on: boolean) =>
+      setHidden((s) => {
+        if (s.has(id) === on) return s
+        const next = new Set(s)
+        if (on) next.add(id)
+        else next.delete(id)
+        return next
+      }),
+    [setHidden],
+  )
+  const toggleHidden = useCallback(
+    (id: string) => {
+      const hide = !hidden.has(id)
+      setHiddenOne(id, hide)
+      toast(t(hide ? 'hiddenToast' : 'unhiddenToast'), {
+        action: { label: t('undo'), onClick: () => setHiddenOne(id, !hide) },
+      })
+    },
+    [hidden, setHiddenOne, t],
+  )
   const setNote = useCallback(
     (id: string, text: string) =>
       setNotes((n) => {
@@ -203,8 +239,30 @@ export function App() {
     [setNotes],
   )
   const ctx = useMemo<AppContextValue>(
-    () => ({ lang, t, fmt, workspace, stars, toggleStar, notes, setNote }),
-    [lang, t, fmt, workspace, stars, toggleStar, notes, setNote],
+    () => ({
+      lang,
+      t,
+      fmt,
+      workspace,
+      stars,
+      toggleStar,
+      hidden,
+      toggleHidden,
+      notes,
+      setNote,
+    }),
+    [
+      lang,
+      t,
+      fmt,
+      workspace,
+      stars,
+      toggleStar,
+      hidden,
+      toggleHidden,
+      notes,
+      setNote,
+    ],
   )
 
   const setFilters = useCallback(
@@ -328,9 +386,11 @@ export function App() {
               >
                 <FilterBar
                   all={all}
+                  pool={pool ?? all}
                   filters={prefs.filters}
                   onChange={setFilters}
                   starCount={starCount}
+                  hiddenCount={hiddenCount}
                 />
               </div>
             )}
@@ -343,10 +403,11 @@ export function App() {
                   ? t('listingsCount', { n: fmt.num(all.length) })
                   : t('appTitle')}
               </span>
-              {all && (
+              {pool && (
                 <ResultBar
-                  total={all.length}
+                  total={pool.length}
                   shown={filtered.length}
+                  onlyHidden={onlyHidden}
                   sort={prefs.sort}
                   onSort={(sort) => setPrefs((p) => ({ ...p, sort }))}
                 />
@@ -440,6 +501,14 @@ export function App() {
           const next = filtered[detailIndex + d] as
             (typeof filtered)[number] | undefined
           if (next) setDetailId(next.id)
+        }}
+        onToggleHidden={(id) => {
+          toggleHidden(id)
+          // It leaves the list it was opened from: go on to the next one.
+          if (detailIndex < 0) return
+          const next = (filtered[detailIndex + 1] ??
+            filtered[detailIndex - 1]) as (typeof filtered)[number] | undefined
+          setDetailId(next?.id ?? null)
         }}
         onShowOnMap={(l) => {
           setDetailId(null)

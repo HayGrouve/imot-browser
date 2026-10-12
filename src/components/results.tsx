@@ -5,6 +5,8 @@ import {
   CalendarBlankIcon,
   CaretDownIcon,
   CloudArrowDownIcon,
+  EyeIcon,
+  EyeSlashIcon,
   FunnelSimpleIcon,
   HouseSimpleIcon,
   ImageIcon,
@@ -47,11 +49,13 @@ export const PAGE = 50 // rows added each time the list grows
 export function ResultBar({
   total,
   shown,
+  onlyHidden,
   sort,
   onSort,
 }: {
   total: number
   shown: number
+  onlyHidden: boolean
   sort: Sort
   onSort: (s: Sort) => void
 }) {
@@ -64,12 +68,16 @@ export function ResultBar({
         className="m-0 text-[15px] font-semibold tracking-[-0.01em] tabular"
       >
         {shown === total ? (
-          t('listingsCount', { n: fmt.num(total) })
+          t(onlyHidden ? 'hiddenCount' : 'listingsCount', {
+            n: fmt.num(total),
+          })
         ) : (
           <>
             {fmt.num(shown)}{' '}
             <span className="font-[450] text-muted-foreground">
-              {t('countOf', { total: fmt.num(total) })}
+              {t(onlyHidden ? 'countOfHidden' : 'countOf', {
+                total: fmt.num(total),
+              })}
             </span>
           </>
         )}
@@ -161,15 +169,19 @@ function Row({
   l,
   multiDeal,
   starred,
+  hidden,
   onOpen,
   onStar,
+  onHide,
   onHover,
 }: {
   l: Listing
   multiDeal: boolean
   starred: boolean
+  hidden: boolean
   onOpen: (id: string) => void
   onStar: (id: string) => void
+  onHide: (id: string, row: HTMLElement) => void
   onHover: (id: string, on: boolean) => void
 }) {
   const { t, fmt, lang } = useApp()
@@ -222,6 +234,8 @@ function Row({
       </span>
     ) : null
   const starLabel = t(starred ? 'unstar' : 'star')
+  const hideLabel = t(hidden ? 'unhide' : 'hide')
+  const HideIcon = hidden ? EyeIcon : EyeSlashIcon
   return (
     <li
       className={cn(
@@ -322,6 +336,23 @@ function Row({
           )}
           <button
             type="button"
+            aria-pressed={hidden}
+            title={hideLabel}
+            aria-label={hideLabel}
+            onClick={(e) => {
+              const row = e.currentTarget.closest('li')
+              if (row) onHide(l.id, row)
+            }}
+            className={cn(
+              'grid size-[34px] cursor-pointer place-items-center rounded-full text-muted-foreground transition-[background-color,color,opacity,transform] hover:bg-surface-3 hover:text-foreground active:scale-90',
+              !hidden &&
+                'opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 [@media(hover:none)]:opacity-100',
+            )}
+          >
+            <HideIcon aria-hidden="true" className="size-[18px]" />
+          </button>
+          <button
+            type="button"
             aria-pressed={starred}
             title={starLabel}
             aria-label={starLabel}
@@ -383,7 +414,7 @@ export function ResultList({
   onHover: (id: string, on: boolean) => void
   scrollRoot: React.RefObject<HTMLDivElement | null>
 }) {
-  const { t, fmt, stars, toggleStar } = useApp()
+  const { t, fmt, stars, toggleStar, hidden, toggleHidden } = useApp()
   const more = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLOListElement>(null)
   const shown = Math.min(limit, total)
@@ -402,6 +433,18 @@ export function ResultList({
     return () => io.disconnect()
   }, [onMore, scrollRoot, shown])
 
+  // The row leaves the list: keep the keyboard on the one that takes its place.
+  const onHide = (id: string, row: HTMLElement) => {
+    const open = (el: Element | null) =>
+      el?.querySelector<HTMLButtonElement>('.row-open')
+    const next =
+      open(row.nextElementSibling) ?? open(row.previousElementSibling)
+    const hadFocus = row.contains(document.activeElement)
+    onHover(id, false)
+    toggleHidden(id)
+    if (hadFocus) requestAnimationFrame(() => next?.focus())
+  }
+
   return (
     <>
       <ol ref={list} className="m-0 list-none px-2 pt-1 pb-2 max-[720px]:px-1">
@@ -411,8 +454,10 @@ export function ResultList({
             l={l}
             multiDeal={multiDeal}
             starred={stars.has(l.id)}
+            hidden={hidden.has(l.id)}
             onOpen={onOpen}
             onStar={toggleStar}
+            onHide={onHide}
             onHover={onHover}
           />
         ))}

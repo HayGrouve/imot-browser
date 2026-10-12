@@ -4,6 +4,7 @@ import {
   applyFilters,
   binOf,
   computeGroups,
+  poolOf,
   ppmBreaks,
   prepare,
   rampColor,
@@ -110,6 +111,13 @@ describe('listings', () => {
     expect(ids({ q: 'Лозенец' })).toEqual(['b'])
     expect(ids({ q: 'lozen sofia' })).toEqual(['b'])
     expect(ids({ starred: true }, new Set(['a']))).toEqual(['a'])
+  })
+
+  test('hidden listings leave the results, and are all that shows when asked for', () => {
+    const all = ['a', 'b', 'c'].map((id) => prepare(raw(id), SOURCES))
+    const hidden = new Set(['b', 'gone'])
+    expect(poolOf(all, hidden, false).map((l) => l.id)).toEqual(['a', 'c'])
+    expect(poolOf(all, hidden, true).map((l) => l.id)).toEqual(['b'])
   })
 
   test('sorting puts listings without the value last', () => {
