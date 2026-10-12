@@ -8,6 +8,8 @@ import {
   CaretLeftIcon,
   CaretRightIcon,
   CaretUpIcon,
+  EyeIcon,
+  EyeSlashIcon,
   FireIcon,
   GpsSlashIcon,
   ImageIcon,
@@ -60,6 +62,7 @@ export function DetailDialog({
   count,
   onClose,
   onStep,
+  onToggleHidden,
   onShowOnMap,
 }: {
   listing: Listing | null
@@ -67,6 +70,7 @@ export function DetailDialog({
   count: number
   onClose: () => void
   onStep: (delta: number) => void
+  onToggleHidden: (id: string) => void
   onShowOnMap: (l: Listing) => void
 }) {
   const { t } = useApp()
@@ -111,6 +115,7 @@ export function DetailDialog({
             titleRef={title}
             onClose={onClose}
             onStep={onStep}
+            onToggleHidden={onToggleHidden}
             onShowOnMap={onShowOnMap}
           />
         ) : (
@@ -128,6 +133,7 @@ function DetailBody({
   titleRef,
   onClose,
   onStep,
+  onToggleHidden,
   onShowOnMap,
 }: {
   l: Listing
@@ -136,10 +142,20 @@ function DetailBody({
   titleRef: React.RefObject<HTMLHeadingElement | null>
   onClose: () => void
   onStep: (delta: number) => void
+  onToggleHidden: (id: string) => void
   onShowOnMap: (l: Listing) => void
 }) {
-  const { t, fmt, lang, workspace, stars, toggleStar, notes, setNote } =
-    useApp()
+  const {
+    t,
+    fmt,
+    lang,
+    workspace,
+    stars,
+    toggleStar,
+    hidden: hiddenIds,
+    notes,
+    setNote,
+  } = useApp()
   const details = useQuery(api.listings.details, { workspace, imotId: l.id })
   const body = useRef<HTMLDivElement>(null)
   const starred = stars.has(l.id)
@@ -157,6 +173,8 @@ function DetailBody({
     .filter(Boolean)
     .join(', ')
   const starLabel = t(starred ? 'unstar' : 'star')
+  const hidden = hiddenIds.has(l.id)
+  const hideLabel = t(hidden ? 'unhide' : 'hide')
 
   useEffect(() => {
     body.current?.scrollTo({ top: 0 })
@@ -195,6 +213,21 @@ function DetailBody({
               aria-hidden="true"
               weight={starred ? 'fill' : 'regular'}
             />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-pressed={hidden}
+            title={hideLabel}
+            aria-label={hideLabel}
+            onClick={() => onToggleHidden(l.id)}
+            className={navBtn}
+          >
+            {hidden ? (
+              <EyeIcon aria-hidden="true" />
+            ) : (
+              <EyeSlashIcon aria-hidden="true" />
+            )}
           </Button>
           <span
             className="mx-1.5 h-5 w-px bg-border max-[560px]:hidden"

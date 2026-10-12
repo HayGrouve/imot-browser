@@ -73,14 +73,19 @@ function usePlaceLabels(all: Array<Listing>, lang: Lang) {
 
 export function FilterBar({
   all,
+  pool,
   filters,
   onChange,
   starCount,
+  hiddenCount,
 }: {
   all: Array<Listing>
+  /** What the filters pick from (all but the hidden ones, or only those): the counts. */
+  pool: Array<Listing>
   filters: Filters
   onChange: (patch: Partial<Filters>) => void
   starCount: number
+  hiddenCount: number
 }) {
   const { t, fmt, lang } = useApp()
   const [open, setOpen] = useState<PillKey | null>(null)
@@ -107,9 +112,9 @@ export function FilterBar({
   }
 
   const moreOptions = useMemo(() => {
-    const nNew = all.filter((l) => l.fresh).length
-    const nStale = all.filter((l) => l.stale).length
-    const nUnmapped = all.filter(isUnmapped).length
+    const nNew = pool.filter((l) => l.fresh).length
+    const nStale = pool.filter((l) => l.stale).length
+    const nUnmapped = pool.filter(isUnmapped).length
     return [
       {
         key: 'onlyNew' as const,
@@ -132,8 +137,15 @@ export function FilterBar({
         n: nUnmapped,
         show: nUnmapped > 0 || f.unmapped,
       },
+      {
+        key: 'hidden' as const,
+        label: t('onlyHidden'),
+        hint: t('onlyHiddenHint'),
+        n: hiddenCount,
+        show: hiddenCount > 0 || f.hidden,
+      },
     ].filter((o) => o.show)
-  }, [all, f.onlyNew, f.hideStale, f.unmapped, t])
+  }, [pool, hiddenCount, f.onlyNew, f.hideStale, f.unmapped, f.hidden, t])
 
   const pillState = (
     key: PillKey,
@@ -180,12 +192,13 @@ export function FilterBar({
     if (pillState(key).active) return true
     if (key === 'type')
       return (
-        countBy(all, typeValue).size > 1 || countBy(all, (l) => l.deal).size > 1
+        countBy(pool, typeValue).size > 1 ||
+        countBy(pool, (l) => l.deal).size > 1
       )
     if (key === 'location')
-      return new Set(all.map((l) => l.place?.key).filter(Boolean)).size > 1
+      return new Set(pool.map((l) => l.place?.key).filter(Boolean)).size > 1
     if (key === 'more') return moreOptions.length > 0
-    return all.length > 0
+    return pool.length > 0
   }
 
   const clearPill = (key: PillKey) => {
@@ -251,7 +264,7 @@ export function FilterBar({
               >
                 <PopBody
                   pill={key}
-                  all={all}
+                  all={pool}
                   filters={f}
                   onChange={onChange}
                   onClose={() => setOpen(null)}
@@ -404,7 +417,7 @@ function PopBody({
   uniqueLabel: (l: Listing) => string
   placeFilterLabel: (key: string) => string
   moreOptions: Array<{
-    key: 'onlyNew' | 'hideStale' | 'unmapped'
+    key: 'onlyNew' | 'hideStale' | 'unmapped' | 'hidden'
     label: string
     hint: string
     n: number
