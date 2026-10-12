@@ -171,6 +171,8 @@ const STRINGS = {
       'Listings sit at the centre of their neighbourhood or settlement.',
     drawnArea: 'Drawn area',
     clearDrawnArea: 'Remove the drawn area',
+    searchArea: 'Search this area',
+    searchAreaTitle: 'Search imot.bg for listings inside the drawn area',
     popupCount: '{n} listings',
     popupMedian: 'Median price {price} · {ppm}/m²',
     popupRange: 'Range {min} to {max}',
@@ -296,6 +298,31 @@ const STRINGS = {
     sfResolving: 'Asking imot.bg for the search…',
     sfRangeError: '{field}: “From” is higher than “To”.',
     sfNumberError: '{field}: enter a number of 0 or more.',
+    sfWherePlace: 'Place',
+    sfAreaLoading: 'Finding the neighbourhoods and villages in the area…',
+    sfAreaDistricts: '{n} of {total} districts',
+    sfAreaPlaces: '{n} of {total} towns and villages',
+    sfAreaMore: '+{n} more',
+    sfAreaUnplacedCity:
+      '{n} of its districts could not be placed on the map, so they are not searched.',
+    sfAreaUnplacedCity_one:
+      '1 of its districts could not be placed on the map, so it is not searched.',
+    sfAreaUnplacedProvince:
+      '{n} of its towns and villages could not be placed on the map, so they are not searched.',
+    sfAreaUnplacedProvince_one:
+      '1 of its towns and villages could not be placed on the map, so it is not searched.',
+    sfAreaNote:
+      'imot.bg searches whole neighbourhoods, towns and villages: one is searched when its centre is inside the area.',
+    sfAreaEmpty:
+      'No neighbourhood, town or village centre is inside this area. It may be outside Bulgaria, or too small to hold one.',
+    sfAreaTooBig:
+      'This area needs {n} searches on imot.bg, and one import takes at most {max}. Draw a smaller area.',
+    sfAreaSearches: '{n} searches on imot.bg, in one import.',
+    sfAreaLinks: '{n} searches on imot.bg',
+    sfAreaLinkCity: '{place}, {n} districts',
+    sfAreaLinkCity_one: '{place}, 1 district',
+    sfAreaLinkProvince: '{place}, {n} towns and villages',
+    sfAreaLinkProvince_one: '{place}, 1 town or village',
     importTitle: 'Import from imot.bg',
     importHelp:
       'Paste one or more imot.bg links, one per line. A search link imports every page of its results; a listing link imports just that listing.',
@@ -408,6 +435,12 @@ const STRINGS = {
       'The import stopped responding. Already collected listings were saved.',
     err_badWorkspace: 'Something went wrong. Reload the page.',
     err_badRequest: 'Something went wrong. Reload the page.',
+    err_badArea:
+      'The drawn area cannot be searched: it has to be a shape in Bulgaria.',
+    err_areaEmpty:
+      'No neighbourhood, town or village centre is inside the drawn area.',
+    err_areaTooBig:
+      'The drawn area needs more searches on imot.bg than one import takes. Draw a smaller area.',
     shareData: 'Open on another device',
     shareTitle: 'Your listings on another device',
     shareBody:
@@ -607,6 +640,8 @@ const STRINGS = {
     drawNote: 'Обявите са в центъра на своя квартал или населено място.',
     drawnArea: 'Очертан район',
     clearDrawnArea: 'Премахни очертания район',
+    searchArea: 'Търси в района',
+    searchAreaTitle: 'Търси в imot.bg обявите в очертания район',
     popupCount: '{n} обяви',
     popupMedian: 'Медианна цена {price} · {ppm}/м²',
     popupRange: 'От {min} до {max}',
@@ -725,6 +760,31 @@ const STRINGS = {
     sfResolving: 'Търсенето се изпраща към imot.bg…',
     sfRangeError: '{field}: стойността „от“ е по-голяма от „до“.',
     sfNumberError: '{field}: въведете число, 0 или по-голямо.',
+    sfWherePlace: 'Място',
+    sfAreaLoading: 'Търсене на кварталите и селата в района…',
+    sfAreaDistricts: '{n} от {total} района',
+    sfAreaPlaces: '{n} от {total} населени места',
+    sfAreaMore: '+ още {n}',
+    sfAreaUnplacedCity:
+      '{n} от районите му не могат да бъдат открити на картата, затова не се търсят.',
+    sfAreaUnplacedCity_one:
+      '1 от районите му не може да бъде открит на картата, затова не се търси.',
+    sfAreaUnplacedProvince:
+      '{n} от населените места в нея не могат да бъдат открити на картата, затова не се търсят.',
+    sfAreaUnplacedProvince_one:
+      '1 от населените места в нея не може да бъде открито на картата, затова не се търси.',
+    sfAreaNote:
+      'imot.bg търси по цели квартали и населени места: всеки се търси, ако центърът му е в района.',
+    sfAreaEmpty:
+      'В този район няма център на квартал или населено място. Може да е извън България или да е твърде малък.',
+    sfAreaTooBig:
+      'Районът изисква {n} търсения в imot.bg, а един импорт побира най-много {max}. Нужен е по-малък район.',
+    sfAreaSearches: '{n} търсения в imot.bg, в един импорт.',
+    sfAreaLinks: '{n} търсения в imot.bg',
+    sfAreaLinkCity: '{place}, {n} района',
+    sfAreaLinkCity_one: '{place}, 1 район',
+    sfAreaLinkProvince: '{place}, {n} населени места',
+    sfAreaLinkProvince_one: '{place}, 1 населено място',
     importTitle: 'Импорт от imot.bg',
     importHelp:
       'Поставете един или повече линка от imot.bg, по един на ред. Линк към търсене импортира всички страници с резултати, а линк към обява импортира само нея.',
@@ -837,6 +897,12 @@ const STRINGS = {
     err_stalled: 'Импортът спря да отговаря. Събраните обяви са запазени.',
     err_badWorkspace: 'Нещо се обърка. Презаредете страницата.',
     err_badRequest: 'Нещо се обърка. Презаредете страницата.',
+    err_badArea:
+      'Очертаният район не може да се търси: трябва да е фигура в България.',
+    err_areaEmpty:
+      'В очертания район няма център на квартал или населено място.',
+    err_areaTooBig:
+      'Очертаният район изисква повече търсения в imot.bg, отколкото побира един импорт. Нужен е по-малък район.',
     shareData: 'Отвори на друго устройство',
     shareTitle: 'Обявите ви на друго устройство',
     shareBody:

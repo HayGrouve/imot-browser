@@ -121,7 +121,7 @@ export function App() {
   const [view, setView] = useState<'list' | 'map'>('list')
   const [detailId, setDetailId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<
-    null | 'import' | 'search' | 'about' | 'share'
+    null | 'import' | 'search' | 'searchArea' | 'about' | 'share'
   >(null)
   const [limit, setLimit] = useState(PAGE)
   const mapRef = useRef<MapHandle>(null)
@@ -471,6 +471,7 @@ export function App() {
                 setFilters({ unmapped: !prefs.filters.unmapped })
               }
               onDrawnArea={(drawnArea) => setFilters({ drawnArea })}
+              onSearchArea={() => setDialog('searchArea')}
               onBaseLayer={(baseLayer) =>
                 setPrefs((p) => ({ ...p, baseLayer }))
               }
@@ -534,8 +535,10 @@ export function App() {
         deleting={deleting}
       />
       <SearchDialog
-        open={dialog === 'search'}
+        open={dialog === 'search' || dialog === 'searchArea'}
         onOpenChange={(o) => setDialog(o ? 'search' : null)}
+        area={prefs.filters.drawnArea}
+        fromMap={dialog === 'searchArea'}
         job={job}
         options={options}
         onOptions={setOptions}

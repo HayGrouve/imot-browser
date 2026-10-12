@@ -17,6 +17,9 @@ export const SEARCH_DEALS: Record<SearchDeal, { rub: string; path: string }> = {
   rent: { rub: '2', path: 'naemi' },
 }
 
+/** Districts one search sends; imot.bg's link builder took all 193 of Sofia's in one go. */
+export const MAX_DISTRICTS = 400
+
 export const isSearchDeal = (d: unknown): d is SearchDeal =>
   d === 'sale' || d === 'rent'
 
@@ -269,7 +272,7 @@ export function buildSearchParams(q: SearchQuery = {}): Record<string, string> {
   if (out[F.location])
     set(
       F.districts,
-      list(q.districts, /^[^+~]{1,60}$/, 400)
+      list(q.districts, /^[^+~]{1,60}$/, MAX_DISTRICTS)
         .map((d) => `${d}+`)
         .join(''),
     )

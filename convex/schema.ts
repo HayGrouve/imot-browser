@@ -91,7 +91,7 @@ export default defineSchema({
     detailFailures: v.number(),
     error: v.optional(v.object({ code: v.string(), message: v.string() })),
     cancelRequested: v.boolean(),
-    /** For a search from the dialog: the link imot.bg built for it. */
+    /** For a search from the dialog: the link imot.bg built for it (the first, for a drawn area). */
     searchUrl: v.optional(v.string()),
   })
     .index('by_status', ['status'])

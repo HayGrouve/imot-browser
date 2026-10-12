@@ -25,6 +25,9 @@ Then:
 - **List**: photo, place, key facts and price per listing, sorted by price, €/m², area, yard, year, update or place.
 - **Map**: one circle per place (or per neighbourhood in big cities), sized by the number of listings and coloured by
   median €/m². Four base maps; the simple one follows the system light or dark theme.
+- **Drawn area**: draw around the part of the map you want, and only the listings inside it show. **Search this area**
+  then imports just that area from imot.bg: one search per city or province it reaches into, limited to the
+  neighbourhoods, towns and villages whose centre is inside.
 - **Listing details**: gallery, key facts, features, description, agency and phone, price history across imports, a link
   to the original and a private note. ←/→ step through photos, j/k through listings.
 - **Re-import** a search to refresh it. Price changes are recorded, and listings that disappeared are flagged. Listing
@@ -47,6 +50,8 @@ The browser talks to [Convex](https://www.convex.dev) directly; Vercel only serv
 - Places come from an offline [GeoNames](https://www.geonames.org) gazetteer of 7,000+ Bulgarian settlements
   (`shared/gazetteer-bg.json`), and OpenStreetMap Nominatim for the rest and for big-city neighbourhoods (cached, at
   most one request a second).
+- An area search uses `shared/districts-bg.json`: every district imot.bg's form offers for its 27 cities and 27
+  provinces, with the point an imported listing there gets. `pnpm districts` rebuilds it.
 
 ## Limitations
 
@@ -60,6 +65,9 @@ imot.bg has no public API, so the importer reads the same HTML pages a browser s
   match price filters, so a split search can miss them. One import stops at 5,000 listings, one browser at 10,000.
 - **No exact locations.** Listings name only the settlement and, in big cities, the neighbourhood, so markers sit at
   the settlement or neighbourhood centre. Some hamlets and named rural areas (*местности*) can't be located.
+- **Area search is by district.** imot.bg searches whole neighbourhoods, towns and villages, so an area search takes
+  each one whose centre is inside the drawn area, all of it. Districts that couldn't be placed on the map are left
+  out, and one area can be at most 8 searches.
 - Some prices exclude VAT ("+VAT") while imot.bg filters on the VAT-inclusive price.
 - Descriptions stay in Bulgarian; labels, property types and common features are translated and place names
   transliterated. The same property listed by several agencies appears several times.
