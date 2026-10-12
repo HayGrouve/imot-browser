@@ -1,0 +1,15 @@
+// Error codes the backend sends (ConvexError data.code); the UI words them.
+export type ErrorCode =
+  | 'badWorkspace'
+  | 'badRequest'
+  | 'noLinks'
+  | 'busy'
+  | 'deleting'
+  | 'rateLimited'
+  | 'unknownLocation'
+  | 'blocked'
+  | 'imotUnavailable'
+  | 'imotBuilder'
+  | 'formNotRecognised'
+  | 'stalled'
+  | 'searchNotFound'
