@@ -388,7 +388,7 @@ const STRINGS = {
     log_workspaceFull:
       'Stopped adding listings at {max} (the limit for one browser)',
     err_busy: 'An import is already running. Wait for it to finish.',
-    err_noLinks: 'Paste at least one imot.bg link.',
+    err_noLinks: 'There is no imot.bg link to search.',
     err_deleting: 'Data is still being deleted. Try again in a moment.',
     err_rateLimited:
       'Too many imports in a short time. Try again in a few minutes.',
@@ -810,7 +810,7 @@ const STRINGS = {
     log_workspaceFull:
       'Спряно добавянето при {max} обяви (лимитът за един браузър)',
     err_busy: 'Вече тече импорт. Изчакайте да приключи.',
-    err_noLinks: 'Поставете поне един линк от imot.bg.',
+    err_noLinks: 'Няма линк от imot.bg за търсене.',
     err_deleting: 'Данните още се изтриват. Опитайте след малко.',
     err_rateLimited:
       'Твърде много импорти за кратко време. Опитайте след няколко минути.',

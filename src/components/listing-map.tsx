@@ -427,12 +427,12 @@ export function ListingMap({
         alt: title,
         riseOnHover: true,
       })
-      // Clearance so the popup isn't tucked under the map buttons.
+      // Clearance so the popup isn't tucked under the map buttons, or the legend below it.
       m.bindPopup(() => popupHtml(g, { t, fmt, lang, hidden, stars }), {
         maxWidth: Math.min(420, room),
         minWidth: Math.min(360, room),
         autoPanPaddingTopLeft: [20, 20],
-        autoPanPaddingBottomRight: [70, 20],
+        autoPanPaddingBottomRight: [70, 100],
         closeButton: true,
       })
       m.addTo(layer)

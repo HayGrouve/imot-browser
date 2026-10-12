@@ -475,7 +475,7 @@ export function App() {
             />
             <ResizablePanel
               id="map-pane"
-              minSize="360px"
+              minSize="420px"
               className="touch-auto!"
             >
               <section
