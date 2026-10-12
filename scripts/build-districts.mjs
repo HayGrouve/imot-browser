@@ -39,15 +39,10 @@ const FORM_TTL_MS = 24 * 3600_000
 
 const { Fetcher } = await import('../convex/lib/fetcher.ts')
 const { Gazetteer } = await import('../shared/gazetteer.ts')
-const { locateOffline } = await import('../shared/importer.ts')
+const { locateOffline, lookupHood } = await import('../shared/importer.ts')
 const { parseLocation } = await import('../shared/parse.ts')
-const {
-  NOMINATIM_UA,
-  geocodeNeighborhood,
-  geocodeSettlement,
-  nominatimUrl,
-  parseNominatim,
-} = await import('../shared/geocode.ts')
+const { NOMINATIM_UA, geocodeSettlement, nominatimUrl, parseNominatim } =
+  await import('../shared/geocode.ts')
 const {
   BUILDER_URL,
   IMOT_BASE,
@@ -169,7 +164,7 @@ async function pointOf(location, district) {
   if (off.hood) return off.hood
   // A neighbourhood OpenStreetMap doesn't know leaves its listings at the city's centre: not placed.
   return place && place.via !== 'neighborhood'
-    ? await geocodeNeighborhood(search, f.neighborhood, f.settlement, place)
+    ? await lookupHood(g, search, f.neighborhood, f.settlement, f.oblast, place)
     : null
 }
 

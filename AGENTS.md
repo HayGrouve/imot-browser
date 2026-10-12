@@ -32,7 +32,7 @@ Data files, committed:
 - `shared/gazetteer-bg.json`: GeoNames' Bulgarian settlements (`pnpm gazetteer`).
 - `shared/districts-bg.json`: imot.bg's districts per city and province, with points (`pnpm districts`). It reads
   imot.bg's live form (a request a second) and looks up what the gazetteer can't on Nominatim exactly as an import
-  does (at most a request a second, ~30 minutes from scratch). Answers are cached in `/tmp/districts-cache.json`, so a
+  does (at most a request a second, ~40 minutes from scratch). Answers are cached in `/tmp/districts-cache.json`, so a
   stopped run resumes; `--seed <file>` adds a deployment's cache (`npx convex data geocache --format jsonl`). Rebuild it
   when imot.bg's districts or the import's place rules change, and check the per-place counts it prints. The browser
   loads it only for an area search (its own chunk in the build).

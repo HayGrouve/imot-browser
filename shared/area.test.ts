@@ -116,25 +116,28 @@ describe('area search', () => {
     expect(validArea('nope')).toBeNull()
   })
 
-  test('the real data: Mladost is in a box around it, and every place has its districts', () => {
+  test('the real data: Lozenets and Mladost are in boxes around them, and every place has its districts', () => {
     const data = districtsData as unknown as DistrictsData
     expect(Object.keys(data.locations)).toHaveLength(54)
     const sofia = data.locations['град София']
     expect(sofia.length).toBeGreaterThan(150)
     expect(sofia.filter((r) => r[1] != null).length).toBeGreaterThan(
-      sofia.length / 2,
+      sofia.length * 0.75,
     )
-    const mladost: DrawnArea = [
-      [42.657, 23.362],
-      [42.657, 23.388],
-      [42.64, 23.388],
-      [42.64, 23.362],
+    const box = (s: number, w: number, n: number, e: number): DrawnArea => [
+      [n, w],
+      [n, e],
+      [s, e],
+      [s, w],
     ]
-    const plan = planArea(mladost, data)
-    expect(plan.places.map((p) => p.location)).toEqual(['град София'])
-    expect(plan.places[0].districts).toEqual(
+    const mladost = planArea(box(42.638, 23.36, 42.665, 23.392), data)
+    expect(mladost.places.map((p) => p.location)).toEqual(['град София'])
+    expect(mladost.places[0].districts).toEqual(
       expect.arrayContaining(['Младост 1', 'Младост 2', 'Младост 3']),
     )
+    expect(
+      planArea(box(42.665, 23.31, 42.685, 23.34), data).places[0].districts,
+    ).toContain('Лозенец')
     // The whole country is far more than one import.
     const bg: DrawnArea = [
       [44.3, 22.3],

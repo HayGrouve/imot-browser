@@ -21,6 +21,7 @@ import {
   MAX_LISTINGS,
   NBHD_VERSION,
   locateOffline,
+  lookupHood,
   lookupKey,
   mergeDetail,
   splitRange,
@@ -39,7 +40,6 @@ import {
 import type { SearchPage } from '../shared/parse'
 import {
   NOMINATIM_UA,
-  geocodeNeighborhood,
   geocodeSettlement,
   nominatimUrl,
   parseNominatim,
@@ -701,10 +701,12 @@ export const runGeocode = internalAction({
         }
         for (const list of hoods.values()) {
           const t = list[0]
-          const found = await geocodeNeighborhood(
+          const found = await lookupHood(
+            gaz(),
             search,
             t.neighborhood ?? '',
             t.settlement ?? '',
+            t.oblast,
             t.place,
           )
           const nbhd: Nbhd = found
