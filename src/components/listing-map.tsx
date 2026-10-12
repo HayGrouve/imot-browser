@@ -21,7 +21,14 @@ import {
   rampColor,
 } from '#/lib/listings'
 import type { DrawnArea, Group, GroupMode, Listing } from '#/lib/listings'
-import { KIND_EN, hoodName, oblastLabel, placeName } from '#/lib/labels'
+import {
+  KIND_EN,
+  floorText,
+  hoodName,
+  oblastLabel,
+  placeName,
+  yearText,
+} from '#/lib/labels'
 import { thumbFor } from '#/lib/urls'
 import { cn } from '#/lib/utils'
 import { transliterate } from '../../shared/text'
@@ -141,23 +148,34 @@ function popupHtml(
     fmt,
     lang,
     hidden,
-  }: Pick<AppContextValue, 't' | 'fmt' | 'lang' | 'hidden'>,
+    stars,
+  }: Pick<AppContextValue, 't' | 'fmt' | 'lang' | 'hidden' | 'stars'>,
 ) {
   const items = [...g.items].sort(
     (a, b) => (a.eur ?? Infinity) - (b.eur ?? Infinity),
   )
-  const shown = items.slice(0, 8)
+  const shown = items.slice(0, 10)
   const rows = shown
     .map((l) => {
-      const size = [
+      const floor = floorText(l, lang)
+      const year = yearText(l)
+      const facts = [
         l.area ? `${fmt.num(l.area)} ${t('sqm')}` : '',
         l.yard ? t('yardFact', { v: fmt.num(l.yard) }) : '',
+        floor ? t('floorFact', { v: floor }) : '',
+        year ? t('builtFact', { v: year }) : '',
       ]
         .filter(Boolean)
         .join(', ')
+      // As in the list: a neighbourhood is named only on a settlement marker, and not when it is the place itself.
+      const hood = l.nbhd?.name || l.neighborhood
+      const where =
+        !g.hood && hood && l.place?.via !== 'neighborhood'
+          ? hoodName(hood, lang)
+          : ''
       const thumb = thumbFor(l)
       const img = thumb
-        ? `<img loading="lazy" src="${esc(thumb)}" alt="" width="52" height="39">`
+        ? `<img loading="lazy" src="${esc(thumb)}" alt="" width="84" height="63">`
         : '<span class="pop-nophoto" aria-hidden="true"></span>'
       const price =
         l.price != null
@@ -165,8 +183,22 @@ function popupHtml(
           : l.priceOnRequest
             ? t('priceOnRequest')
             : ''
+      const ppm = l.ppm
+        ? `<span class="pop-ppm">${esc(fmt.money(l.ppm))}/${esc(t('sqm'))}</span>`
+        : ''
+      const badges = [
+        l.fresh
+          ? `<span class="pop-tag pop-tag-new">${esc(t('badgeNew'))}</span>`
+          : '',
+        l.stale
+          ? `<span class="pop-tag pop-tag-stale">${esc(t('badgeStaleShort'))}</span>`
+          : '',
+        stars.has(l.id)
+          ? `<span class="pop-star"><span aria-hidden="true">★</span><span class="sr-only">${esc(t('pillStarred'))}</span></span>`
+          : '',
+      ].join('')
       const hide = hidden.has(l.id) ? 'unhide' : 'hide'
-      return `<li><button type="button" class="pop-row" data-open="${esc(l.id)}">${img}<span class="pop-desc">${esc(typeLabel(l.type ?? 'other', l.typeBg, lang, true))}<br><span class="muted">${esc(size)}</span></span><b>${esc(price)}</b></button><button type="button" class="pop-hide" data-hide="${esc(l.id)}" aria-pressed="${hide === 'unhide'}" title="${esc(t(hide))}" aria-label="${esc(t(hide))}">${svgIcon(ICON_PATHS[hide])}</button></li>`
+      return `<li><button type="button" class="pop-row${l.stale ? ' pop-stale' : ''}" data-open="${esc(l.id)}">${img}<span class="pop-desc"><span class="pop-kind">${esc(typeLabel(l.type ?? 'other', l.typeBg, lang, true))}${badges}</span>${facts ? `<span class="muted">${esc(facts)}</span>` : ''}${where ? `<span class="muted">${esc(where)}</span>` : ''}</span><span class="pop-price"><b>${esc(price)}</b>${ppm}</span></button><button type="button" class="pop-hide" data-hide="${esc(l.id)}" aria-pressed="${hide === 'unhide'}" title="${esc(t(hide))}" aria-label="${esc(t(hide))}">${svgIcon(ICON_PATHS[hide])}</button></li>`
     })
     .join('')
   const more =
@@ -234,7 +266,7 @@ export function ListingMap({
   onGroupMode: (mode: GroupMode) => void
 }) {
   const app = useApp()
-  const { t, fmt, lang, hidden, toggleHidden } = app
+  const { t, fmt, lang, hidden, stars, toggleHidden } = app
   const box = useRef<HTMLDivElement>(null)
   const [state, setState] = useState<MapState | null>(null)
   const [drawing, setDrawing] = useState(false)
@@ -366,6 +398,8 @@ export function ListingMap({
     const { L, map, layer } = state
     const { list, unmapped } = computeGroups(filtered, groupMode)
     groups.current = list
+    // Never wider than the screen: 20 px clear on the left, 70 on the right (the map's buttons).
+    const room = window.innerWidth - 90
     const breaks = ppmBreaks(list)
     const reopen = openKey.current
     const scrollTop =
@@ -394,9 +428,9 @@ export function ListingMap({
         riseOnHover: true,
       })
       // Clearance so the popup isn't tucked under the map buttons.
-      m.bindPopup(() => popupHtml(g, { t, fmt, lang, hidden }), {
-        maxWidth: 340,
-        minWidth: 280,
+      m.bindPopup(() => popupHtml(g, { t, fmt, lang, hidden, stars }), {
+        maxWidth: Math.min(420, room),
+        minWidth: Math.min(360, room),
         autoPanPaddingTopLeft: [20, 20],
         autoPanPaddingBottomRight: [70, 20],
         closeButton: true,
@@ -428,7 +462,7 @@ export function ListingMap({
       }
     } else map.closePopup()
     refocus.current = null
-  }, [state, filtered, groupMode, selectedPlace, lang, t, fmt, hidden])
+  }, [state, filtered, groupMode, selectedPlace, lang, t, fmt, hidden, stars])
 
   // The drawn area, under the markers.
   useEffect(() => {
