@@ -3,10 +3,11 @@
 // listings show (hidden and starred). Without it, another device opens the
 // workspace with whatever it showed last.
 
+import { roundArea } from '../../shared/area'
 import {
   DEFAULT_FILTERS,
   validAreaSearches,
-  validDrawnArea,
+  validFilters,
   validShown,
   validSort,
 } from './listings'
@@ -23,12 +24,7 @@ export interface SharedView {
   area: AreaSearch | null
 }
 
-const NUMBERS = ['priceMin', 'priceMax', 'areaMin', 'areaMax', 'yardMin']
 const ID = /^[A-Za-z0-9]{1,40}$/
-
-/** About a metre: Leaflet's 15 decimals would make the link long for nothing. */
-const round = (area: DrawnArea): DrawnArea =>
-  area.map(([lat, lon]) => [+lat.toFixed(5), +lon.toFixed(5)])
 
 export function encodeView(view: SharedView): string {
   const filters: Partial<Filters> = {}
@@ -36,7 +32,7 @@ export function encodeView(view: SharedView): string {
     const value = view.filters[k]
     if (value === DEFAULT_FILTERS[k]) continue
     Object.assign(filters, {
-      [k]: k === 'drawnArea' && value ? round(value as DrawnArea) : value,
+      [k]: k === 'drawnArea' && value ? roundArea(value as DrawnArea) : value,
     })
   }
   const json = JSON.stringify({
@@ -45,7 +41,10 @@ export function encodeView(view: SharedView): string {
     sort: view.sort,
     hidden: view.hidden,
     stars: view.stars,
-    area: view.area && { urls: view.area.urls, area: round(view.area.area) },
+    area: view.area && {
+      urls: view.area.urls,
+      area: roundArea(view.area.area),
+    },
   })
   let bin = ''
   for (const b of new TextEncoder().encode(json)) bin += String.fromCharCode(b)
@@ -73,21 +72,6 @@ export function decodeView(text: string | null): SharedView | null {
     stars: validIds(v.stars),
     area: validAreaSearches([v.area])[0] ?? null,
   }
-}
-
-function validFilters(v: unknown): Filters {
-  const f = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>
-  const out: Filters = { ...DEFAULT_FILTERS }
-  for (const k of Object.keys(DEFAULT_FILTERS) as Array<keyof Filters>) {
-    const value = f[k]
-    if (k === 'drawnArea') out.drawnArea = validDrawnArea(value)
-    else if (NUMBERS.includes(k)) {
-      if (typeof value === 'number' && Number.isFinite(value))
-        Object.assign(out, { [k]: value })
-    } else if (typeof value === typeof DEFAULT_FILTERS[k])
-      Object.assign(out, { [k]: value })
-  }
-  return out
 }
 
 const validIds = (v: unknown): Array<string> =>

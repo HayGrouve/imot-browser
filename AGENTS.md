@@ -14,7 +14,7 @@ How to run, test and verify this repo. Words for things are in [`CONTEXT.md`](./
 | `convex/` | Schema and functions. `importer.ts` and `searchForm.ts` are `"use node"` actions (they fetch imot.bg; the V8 runtime has no windows-1251 decoder); `imports.ts` is the queue and every write of an import | Public functions take a `workspace` and check it (`convex/lib/workspace.ts`) |
 | `src/routes/` | TanStack file routes (one page) | `src/routeTree.gen.ts` is generated: commit it, never edit it |
 | `src/components/` | The app. `ui/` holds shadcn components | Add `ui/` components with `npx shadcn@latest add`, never by hand |
-| `src/lib/` | UI logic (filters, sorting, map groups, the search dialog's query), EN/BG strings (`i18n.ts`) | Pure where possible, with tests |
+| `src/lib/` | UI logic: the view (`view.ts`: how a page starts, its changes, which listings show, what a share link carries), filters, sorting, map groups, the search dialog's query; EN/BG strings (`i18n.ts`) | Pure where possible, with tests. A rule about what shows goes in `view.ts`, not `app.tsx` |
 | `scripts/` | CI preflight, the Vercel build, the gazetteer and districts builders | Run with plain Node: they import `shared/` TypeScript as is, so no parameter properties or enums there |
 
 ## Run
