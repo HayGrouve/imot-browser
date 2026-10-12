@@ -1,6 +1,6 @@
 import { Dialog, DialogContent } from '#/components/ui/dialog'
 import { useApp } from './app-context'
-import { DIALOG, DialogHead } from './import-dialog'
+import { DIALOG, DialogHead } from './searches-dialog'
 
 export function AboutDialog({
   open,

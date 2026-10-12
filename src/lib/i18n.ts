@@ -62,8 +62,7 @@ const STRINGS = {
     floorFact: 'floor {v}',
     builtFact: 'built {v}',
     emptyTitle: 'No listings yet',
-    emptyBody:
-      'Search imot.bg or import a search link to browse every listing it finds on a map.',
+    emptyBody: 'Search imot.bg to browse every listing it finds on a map.',
     emptyFilteredTitle: 'Nothing matches these filters',
     emptyFilteredBody:
       'Widen the price or size range, or clear the filters to see everything.',
@@ -82,9 +81,6 @@ const STRINGS = {
     importOptions: 'Import options',
     listingsCount: '{n} listings',
     placesCount: '{n} places',
-    import: 'Import',
-    export: 'Export',
-    exportCsv: 'Export filtered as CSV',
     about: 'How it works',
     langToggle: 'БГ',
     langToggleTitle: 'Превключи на български',
@@ -214,7 +210,7 @@ const STRINGS = {
     descMore: 'Show more',
     descLess: 'Show less',
     descriptionSnippet:
-      'Only the short summary from the search page is available. Re-import with “Fetch each listing’s page” for the full description.',
+      'Only the short summary from the search page is available. Search again with “Fetch each listing’s page” on for the full description.',
     contact: 'Contact',
     agency: 'Agency',
     broker: 'Broker',
@@ -227,6 +223,7 @@ const STRINGS = {
     promo: 'Promoted listing ({p})',
 
     searchImot: 'Search imot.bg',
+    yourSearches: 'Your searches',
     sfIntro:
       'The filters of imot.bg’s own search. Every listing it finds is imported here, with a map.',
     sfSale: 'For sale',
@@ -296,11 +293,6 @@ const STRINGS = {
     sfResolving: 'Asking imot.bg for the search…',
     sfRangeError: '{field}: “From” is higher than “To”.',
     sfNumberError: '{field}: enter a number of 0 or more.',
-    importTitle: 'Import from imot.bg',
-    importHelp:
-      'Paste one or more imot.bg links, one per line. A search link imports every page of its results; a listing link imports just that listing.',
-    importPlaceholder:
-      'https://www.imot.bg/obiavi/prodazhbi/oblast-sofiya/kashta?price_min=55000',
     optDetails: 'Fetch each listing’s page',
     optDetailsHint:
       'Full description, all photos, features and the last-updated date. About 1 extra request per listing.',
@@ -310,14 +302,12 @@ const STRINGS = {
     optGeocode: 'Look up missing places online',
     optGeocodeHint:
       'Places missing from the offline gazetteer, and city neighbourhoods, are looked up on OpenStreetMap (at most 1 request per second).',
-    startImport: 'Start import',
     cancelImport: 'Cancel',
     importRunning: 'Importing…',
     importDone: 'Import finished',
     importCancelled: 'Import cancelled',
     importCancelledHint: 'The listings collected so far were kept.',
     importStopped: 'Import stopped',
-    importError: 'Import stopped: {message}',
     importResult:
       'New: {added}, updated: {updated}, price changes: {priceChanged}. {total} listings in total ({requests} requests to imot.bg).',
     jobDetails: 'Details',
@@ -333,24 +323,25 @@ const STRINGS = {
     progDetails: 'Listing pages',
     progGeocode: 'Places looked up online',
     progFound: '{n} listings found',
-    sourcesTitle: 'Imported searches',
-    sourcesEmpty: 'Nothing imported yet.',
-    sourceInfo: '{n} listings · last imported {date}',
-    sourceInfo_one: '1 listing · last imported {date}',
+    sourcesTitle: 'Saved searches',
+    sourcesEmpty:
+      'No saved searches yet. Use “Search imot.bg” to find listings; the searches you run are kept here.',
+    sourceInfo: '{n} listings · last refreshed {date}',
+    sourceInfo_one: '1 listing · last refreshed {date}',
     sourceParamsLabel: 'imot.bg filters:',
     sourceCapped: 'Split into price bands',
     sourceCappedTitle:
       'Over 1,000 results, so the search was split into price bands',
-    reimport: 'Re-import',
-    reimportAll: 'Re-import all',
+    reimport: 'Refresh',
+    reimportAll: 'Refresh all',
     removeSource: 'Remove',
     removeSourceConfirm:
       'Remove this search and the listings that came only from it?',
     deleteAll: 'Delete all data',
     deleteAllHint:
-      'Removes every imported listing. Stars and notes in this browser are kept.',
+      'Removes every listing your searches found. Stars and notes in this browser are kept.',
     deleteAllConfirm:
-      'Delete all imported listings? Stars and notes in this browser are kept.',
+      'Delete all listings your searches found? Stars and notes in this browser are kept.',
     manualSource: 'Individually added listings',
     log_sessionParamRemoved:
       'Removed the session-only “plnk/slink” parameter so the search can be replayed',
@@ -415,7 +406,6 @@ const STRINGS = {
     copyLink: 'Copy link',
     copied: 'Link copied',
     cancel: 'Cancel',
-    csvPreparing: 'Preparing the CSV…',
     deleting: 'Deleting…',
     workspaceSwitched: 'Opened the listings from the link',
 
@@ -424,7 +414,7 @@ const STRINGS = {
 <p class="lead">This tool reads the <strong>public HTML pages</strong> of imot.bg (there is no official API) and keeps a copy of what it finds. Your listings are tied to this browser: there is no sign-in yet, and “Open on another device” in the menu gives you a link to them. Here is what can and cannot be extracted from a link.</p>
 <h3>Links</h3>
 <ul>
-<li><strong>Search links are replayed, not opened as-is.</strong> Parameters such as <code>plnk</code> and <code>slink</code> belong to the browser session that created them; from any other session imot.bg answers “page not found”. They are removed automatically and the search is rebuilt from the path (<code>/obiavi/prodazhbi/oblast-sofiya/kashta</code>) and the visible filters (<code>price_min</code>, <code>price_max</code>, …). Filters that exist only inside the session and are not in the URL are lost, so compare the imot.bg filter summary under each imported search with what you expect.</li>
+<li><strong>Search links are replayed, not opened as-is.</strong> Parameters such as <code>plnk</code> and <code>slink</code> belong to the browser session that created them; from any other session imot.bg answers “page not found”. They are removed automatically and the search is rebuilt from the path (<code>/obiavi/prodazhbi/oblast-sofiya/kashta</code>) and the visible filters (<code>price_min</code>, <code>price_max</code>, …). Filters that exist only inside the session and are not in the URL are lost, so compare the imot.bg filter summary under each saved search with what you expect.</li>
 <li>Old-style links (<code>pcgi/imot.cgi?act=3&amp;slink=…</code>) cannot be replayed at all. Mobile links (<code>m.imot.bg</code>) are converted to the desktop site.</li>
 <li><strong>imot.bg shows at most 1,000 results per search</strong> (25 pages × 40). Larger searches are split automatically into price bands. Listings with no price (“price on request”) do not match price filters, so they can be missed in split searches.</li>
 <li>Some ads quote prices without VAT (marked “+VAT” in the list), while imot.bg filters searches on the VAT-inclusive price. That is why they can appear below your search’s minimum price.</li>
@@ -435,7 +425,7 @@ const STRINGS = {
 <li>Without “Fetch each listing’s page”, data comes from the search result cards only: a truncated description, 4 photos, and features guessed from the summary line.</li>
 <li>Descriptions are shown in the original Bulgarian. Only interface labels, property types and common features are translated, and place names are transliterated. imot.bg publishes English translations of its ads on the partner site imoti.info.</li>
 <li>The same property listed by several agencies appears as separate listings (each has its own imot.bg ID).</li>
-<li>This is a snapshot: prices and availability change. Re-import a search to refresh it. Price changes are recorded, and listings that disappeared are marked “No longer listed”.</li>
+<li>This is a snapshot: prices and availability change. Refresh a search under “Your searches” to update it. Price changes are recorded, and listings that disappeared are marked “No longer listed”.</li>
 <li>Photos are loaded from imot.bg’s servers, so they need an internet connection and disappear when an ad is removed.</li>
 </ul>
 <h3>Fair use</h3>
@@ -500,7 +490,7 @@ const STRINGS = {
     builtFact: '{v} г.',
     emptyTitle: 'Още няма обяви',
     emptyBody:
-      'Потърсете в imot.bg или импортирайте линк към търсене, за да разгледате всички намерени обяви на карта.',
+      'Потърсете в imot.bg, за да разгледате всички намерени обяви на карта.',
     emptyFilteredTitle: 'Нищо не отговаря на филтрите',
     emptyFilteredBody:
       'Разширете цената или площта или изчистете филтрите, за да видите всичко.',
@@ -519,9 +509,6 @@ const STRINGS = {
     importOptions: 'Настройки на импорта',
     listingsCount: '{n} обяви',
     placesCount: '{n} населени места',
-    import: 'Импорт',
-    export: 'Експорт',
-    exportCsv: 'Експорт на филтрираните (CSV)',
     about: 'Как работи',
     langToggle: 'EN',
     langToggleTitle: 'Switch to English',
@@ -650,7 +637,7 @@ const STRINGS = {
     descMore: 'Покажи още',
     descLess: 'Покажи по-малко',
     descriptionSnippet:
-      'Налично е само краткото резюме от страницата с резултати. Импортирайте отново с „Зареди страницата на всяка обява“ за пълното описание.',
+      'Налично е само краткото резюме от страницата с резултати. Потърсете отново с включено „Зареди страницата на всяка обява“ за пълното описание.',
     contact: 'Контакт',
     agency: 'Агенция',
     broker: 'Брокер',
@@ -663,6 +650,7 @@ const STRINGS = {
     promo: 'Промотирана обява ({p})',
 
     searchImot: 'Търсене в imot.bg',
+    yourSearches: 'Вашите търсения',
     sfIntro:
       'Филтрите на търсенето в imot.bg. Всички намерени обяви се импортират тук, заедно с карта.',
     sfSale: 'Продажби',
@@ -725,11 +713,6 @@ const STRINGS = {
     sfResolving: 'Търсенето се изпраща към imot.bg…',
     sfRangeError: '{field}: стойността „от“ е по-голяма от „до“.',
     sfNumberError: '{field}: въведете число, 0 или по-голямо.',
-    importTitle: 'Импорт от imot.bg',
-    importHelp:
-      'Поставете един или повече линка от imot.bg, по един на ред. Линк към търсене импортира всички страници с резултати, а линк към обява импортира само нея.',
-    importPlaceholder:
-      'https://www.imot.bg/obiavi/prodazhbi/oblast-sofiya/kashta?price_min=55000',
     optDetails: 'Зареди страницата на всяка обява',
     optDetailsHint:
       'Пълно описание, всички снимки, особености и дата на обновяване. Около 1 допълнителна заявка на обява.',
@@ -739,14 +722,12 @@ const STRINGS = {
     optGeocode: 'Търси липсващите места онлайн',
     optGeocodeHint:
       'Местата, които липсват в офлайн справочника, и кварталите в големите градове се търсят в OpenStreetMap (най-много 1 заявка в секунда).',
-    startImport: 'Започни импорт',
     cancelImport: 'Откажи',
     importRunning: 'Импортиране…',
     importDone: 'Импортът приключи',
     importCancelled: 'Импортът е отказан',
     importCancelledHint: 'Събраните дотук обяви са запазени.',
     importStopped: 'Импортът спря',
-    importError: 'Импортът спря: {message}',
     importResult:
       'Нови: {added}, обновени: {updated}, промени в цената: {priceChanged}. Общо {total} обяви ({requests} заявки към imot.bg).',
     jobDetails: 'Подробности',
@@ -762,24 +743,25 @@ const STRINGS = {
     progDetails: 'Страници на обяви',
     progGeocode: 'Места, търсени онлайн',
     progFound: 'Намерени {n} обяви',
-    sourcesTitle: 'Импортирани търсения',
-    sourcesEmpty: 'Още няма импортирани търсения.',
-    sourceInfo: '{n} обяви · последен импорт {date}',
-    sourceInfo_one: '1 обява · последен импорт {date}',
+    sourcesTitle: 'Запазени търсения',
+    sourcesEmpty:
+      'Още няма запазени търсения. Ползвайте „Търсене в imot.bg“, за да намерите обяви; търсенията, които пуснете, се пазят тук.',
+    sourceInfo: '{n} обяви · последно обновено {date}',
+    sourceInfo_one: '1 обява · последно обновено {date}',
     sourceParamsLabel: 'Филтри в imot.bg:',
     sourceCapped: 'Разделено по цени',
     sourceCappedTitle:
       'Над 1000 резултата, затова търсенето е разделено на ценови диапазони',
-    reimport: 'Импортирай отново',
+    reimport: 'Обнови',
     reimportAll: 'Обнови всички',
     removeSource: 'Премахни',
     removeSourceConfirm:
       'Да се премахне ли търсенето и обявите, дошли само от него?',
     deleteAll: 'Изтрий всички данни',
     deleteAllHint:
-      'Премахва всички импортирани обяви. Отметките и бележките в този браузър се запазват.',
+      'Премахва всички обяви, намерени от търсенията ви. Отметките и бележките в този браузър се запазват.',
     deleteAllConfirm:
-      'Да се изтрият ли всички импортирани обяви? Отметките и бележките в браузъра се запазват.',
+      'Да се изтрият ли всички обяви, намерени от търсенията ви? Отметките и бележките в браузъра се запазват.',
     manualSource: 'Отделно добавени обяви',
     log_sessionParamRemoved:
       'Премахнат е сесийният параметър „plnk/slink“, за да може търсенето да се повтори',
@@ -844,7 +826,6 @@ const STRINGS = {
     copyLink: 'Копирай линка',
     copied: 'Линкът е копиран',
     cancel: 'Отказ',
-    csvPreparing: 'CSV файлът се подготвя…',
     deleting: 'Изтриване…',
     workspaceSwitched: 'Отворени са обявите от линка',
 
@@ -853,7 +834,7 @@ const STRINGS = {
 <p class="lead">Инструментът чете <strong>публичните HTML страници</strong> на imot.bg (официален API няма) и пази копие на намереното. Обявите са свързани с този браузър: вход все още няма, а „Отвори на друго устройство“ в менюто дава линк към тях. Ето какво може и какво не може да се извлече от един линк.</p>
 <h3>Линкове</h3>
 <ul>
-<li><strong>Търсенията се изпълняват наново, а не се отварят буквално.</strong> Параметри като <code>plnk</code> и <code>slink</code> принадлежат на сесията на браузъра, в която са създадени; от друга сесия imot.bg връща „страницата не е намерена“. Те се премахват автоматично и търсенето се възстановява от пътя (<code>/obiavi/prodazhbi/oblast-sofiya/kashta</code>) и видимите филтри (<code>price_min</code>, <code>price_max</code>, …). Филтрите, които съществуват само в сесията и ги няма в адреса, се губят, затова сравнете обобщението на филтрите от imot.bg под всяко импортирано търсене с очакваното.</li>
+<li><strong>Търсенията се изпълняват наново, а не се отварят буквално.</strong> Параметри като <code>plnk</code> и <code>slink</code> принадлежат на сесията на браузъра, в която са създадени; от друга сесия imot.bg връща „страницата не е намерена“. Те се премахват автоматично и търсенето се възстановява от пътя (<code>/obiavi/prodazhbi/oblast-sofiya/kashta</code>) и видимите филтри (<code>price_min</code>, <code>price_max</code>, …). Филтрите, които съществуват само в сесията и ги няма в адреса, се губят, затова сравнете обобщението на филтрите от imot.bg под всяко запазено търсене с очакваното.</li>
 <li>Старите линкове (<code>pcgi/imot.cgi?act=3&amp;slink=…</code>) не могат да се повторят. Мобилните линкове (<code>m.imot.bg</code>) се преобразуват към основния сайт.</li>
 <li><strong>imot.bg показва най-много 1000 резултата на търсене</strong> (25 страници × 40). По-големите търсения автоматично се разделят на ценови диапазони. Обявите без цена („при запитване“) не попадат в ценовите филтри и може да липсват при разделените търсения.</li>
 <li>Някои обяви са с цена без ДДС (отбелязани с „+ДДС“ в списъка), а imot.bg филтрира търсенията по цената с ДДС. Затова може да са под минималната цена на търсенето.</li>
@@ -864,7 +845,7 @@ const STRINGS = {
 <li>Без „Зареди страницата на всяка обява“ данните идват само от картите с резултати: съкратено описание, 4 снимки и особености, разпознати от краткия ред с информация.</li>
 <li>Описанията са на оригиналния език. Превеждат се само етикетите, видовете имоти и честите особености, а имената на местата се транслитерират на английски. imot.bg публикува преводи на обявите на английски в сайта imoti.info.</li>
 <li>Един и същ имот, обявен от няколко агенции, се показва като отделни обяви (всяка има собствен номер в imot.bg).</li>
-<li>Това е моментна снимка: цените и наличността се променят. Импортирайте търсенето отново, за да го обновите. Промените в цената се записват, а изчезналите обяви се отбелязват със „Свалена“.</li>
+<li>Това е моментна снимка: цените и наличността се променят. Обновете търсене от „Вашите търсения“, за да видите промените. Промените в цената се записват, а изчезналите обяви се отбелязват със „Свалена“.</li>
 <li>Снимките се зареждат от сървърите на imot.bg, затова е нужен интернет, а когато обявата бъде свалена, те изчезват.</li>
 </ul>
 <h3>Коректно ползване</h3>

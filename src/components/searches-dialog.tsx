@@ -1,11 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation } from 'convex/react'
-import {
-  ArrowClockwiseIcon,
-  CloudArrowDownIcon,
-  TrashIcon,
-  XIcon,
-} from '@phosphor-icons/react'
+import { ArrowClockwiseIcon, TrashIcon, XIcon } from '@phosphor-icons/react'
 import { api } from '../../convex/_generated/api'
 import { Button } from '#/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '#/components/ui/dialog'
@@ -18,9 +13,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '#/components/ui/alert-dialog'
-import { Textarea } from '#/components/ui/textarea'
 import { useApp, errorText } from './app-context'
-import { ImportOptionsPanel, JobError, JobView, jobRunning } from './job-view'
+import { JobError, JobView, jobRunning } from './job-view'
 import type { Job } from './job-view'
 import { countBy } from '#/lib/listings'
 import type { Listing, Source } from '#/lib/listings'
@@ -101,12 +95,12 @@ export function Confirm({
   )
 }
 
-export function ImportDialog({
+/** The saved searches: re-run, remove, and "Delete all data". New searches start from the search dialog. */
+export function SearchesDialog({
   open,
   onOpenChange,
   job,
   options,
-  onOptions,
   sources,
   all,
   deleting,
@@ -114,20 +108,18 @@ export function ImportDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   job: Job | null | undefined
+  /** The saved options: a re-run uses them. */
   options: ImportOptions
-  onOptions: (o: ImportOptions) => void
   sources: Array<Source>
   all: Array<Listing> | null
   /** "Delete all data" or a removed search is still being deleted. */
   deleting: boolean
 }) {
   const { t, fmt, workspace } = useApp()
-  const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<
     null | { kind: 'all' } | { kind: 'source'; key: string }
   >(null)
-  const input = useRef<HTMLTextAreaElement>(null)
   const start = useMutation(api.imports.start)
   const cancel = useMutation(api.imports.cancel)
   const removeSource = useMutation(api.sources.remove)
@@ -174,58 +166,32 @@ export function ImportDialog({
       <DialogContent
         showCloseButton={false}
         className={`${DIALOG} w-[min(680px,calc(100vw-32px))]`}
-        aria-labelledby="importTitle"
+        aria-labelledby="searchesTitle"
       >
         <DialogHead
-          id="importTitle"
-          title={t('importTitle')}
+          id="searchesTitle"
+          title={t('yourSearches')}
           onClose={() => onOpenChange(false)}
         />
         <div className="flex flex-1 flex-col gap-8 overflow-auto overscroll-contain p-6 max-[720px]:pb-[max(24px,env(safe-area-inset-bottom))] max-[560px]:px-4 max-[560px]:pt-4">
-          <section className="flex flex-col gap-3.5">
-            <p id="importHelp" className="m-0 max-w-[62ch] text-foreground-2">
-              {t('importHelp')}
-            </p>
-            <Textarea
-              ref={input}
-              rows={4}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              spellCheck={false}
-              autoComplete="off"
-              placeholder={t('importPlaceholder')}
-              aria-labelledby="importTitle"
-              aria-describedby="importHelp"
-              className="min-h-[104px] text-[13.5px]"
-            />
-            <ImportOptionsPanel options={options} onChange={onOptions} />
-            <div className="flex items-center gap-2">
-              <Button
-                size="lg"
-                disabled={busy}
-                onClick={() => {
-                  if (!text.trim()) {
-                    input.current?.focus()
-                    return
-                  }
-                  void run(text.trim())
-                }}
-              >
-                <CloudArrowDownIcon aria-hidden="true" />
-                {t('startImport')}
-              </Button>
+          {(running || error) && (
+            <section className="flex flex-col gap-3.5">
+              {error && <JobError message={error} />}
               {running && (
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => void act(() => cancel({ workspace }))}
-                >
-                  {t('cancelImport')}
-                </Button>
+                <>
+                  <JobView job={job} />
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="self-start"
+                    onClick={() => void act(() => cancel({ workspace }))}
+                  >
+                    {t('cancelImport')}
+                  </Button>
+                </>
               )}
-            </div>
-            {error ? <JobError message={error} /> : <JobView job={job} />}
-          </section>
+            </section>
+          )}
           <section
             aria-labelledby="sourcesTitle"
             className="flex flex-col gap-1"
