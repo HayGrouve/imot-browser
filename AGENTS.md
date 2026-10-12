@@ -10,12 +10,12 @@ How to run, test and verify this repo. Words for things are in [`CONTEXT.md`](./
 
 | Folder | Holds | Rule |
 | --- | --- | --- |
-| `shared/` | Pure TS: imot.bg parsers (`parse.ts`), the search form (`searchform.ts`), the import's rules (`importer.ts`), gazetteer, Nominatim matching, text and vocabulary | No Convex or browser imports. Tested against saved real pages in `shared/fixtures/` |
+| `shared/` | Pure TS: imot.bg parsers (`parse.ts`), the search form (`searchform.ts`), the import's rules (`importer.ts`), the area search plan (`area.ts`), gazetteer, Nominatim matching, text and vocabulary | No Convex or browser imports. Tested against saved real pages in `shared/fixtures/` |
 | `convex/` | Schema and functions. `importer.ts` and `searchForm.ts` are `"use node"` actions (they fetch imot.bg; the V8 runtime has no windows-1251 decoder); `imports.ts` is the queue and every write of an import | Public functions take a `workspace` and check it (`convex/lib/workspace.ts`) |
 | `src/routes/` | TanStack file routes (one page) | `src/routeTree.gen.ts` is generated: commit it, never edit it |
 | `src/components/` | The app. `ui/` holds shadcn components | Add `ui/` components with `npx shadcn@latest add`, never by hand |
 | `src/lib/` | UI logic (filters, sorting, map groups, the search dialog's query), EN/BG strings (`i18n.ts`) | Pure where possible, with tests |
-| `scripts/` | CI preflight, the Vercel build, the gazetteer builder | |
+| `scripts/` | CI preflight, the Vercel build, the gazetteer and districts builders | Run with plain Node: they import `shared/` TypeScript as is, so no parameter properties or enums there |
 
 ## Run
 
@@ -25,7 +25,17 @@ npx convex dev                      # dev deployment, pushes on save (writes .en
 pnpm dev                            # http://localhost:3000
 npx convex run imports:current '{"workspace":"<key>"}'    # an import's state
 npx convex logs                     # the import steps' logs
+pnpm districts                      # rebuild shared/districts-bg.json (see below)
 ```
+
+Data files, committed:
+- `shared/gazetteer-bg.json`: GeoNames' Bulgarian settlements (`pnpm gazetteer`).
+- `shared/districts-bg.json`: imot.bg's districts per city and province, with points (`pnpm districts`). It reads
+  imot.bg's live form (a request a second) and looks up what the gazetteer can't on Nominatim exactly as an import
+  does (at most a request a second, ~30 minutes from scratch). Answers are cached in `/tmp/districts-cache.json`, so a
+  stopped run resumes; `--seed <file>` adds a deployment's cache (`npx convex data geocache --format jsonl`). Rebuild it
+  when imot.bg's districts or the import's place rules change, and check the per-place counts it prints. The browser
+  loads it only for an area search (its own chunk in the build).
 
 Env:
 - `.env.local` gets `CONVEX_DEPLOYMENT` and `VITE_CONVEX_URL` from `npx convex dev`. Never print a secret or commit an

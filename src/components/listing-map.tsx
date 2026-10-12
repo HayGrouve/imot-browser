@@ -4,6 +4,7 @@ import type * as Leaflet from 'leaflet'
 import {
   CornersOutIcon,
   GpsSlashIcon,
+  ListMagnifyingGlassIcon,
   PolygonIcon,
   StackIcon,
   XIcon,
@@ -247,6 +248,7 @@ export function ListingMap({
   onFilterPlace,
   onToggleUnmapped,
   onDrawnArea,
+  onSearchArea,
   onBaseLayer,
   onGroupMode,
 }: {
@@ -262,6 +264,8 @@ export function ListingMap({
   onFilterPlace: (key: string) => void
   onToggleUnmapped: () => void
   onDrawnArea: (area: DrawnArea | null) => void
+  /** Search imot.bg inside the drawn area. */
+  onSearchArea: () => void
   onBaseLayer: (key: string) => void
   onGroupMode: (mode: GroupMode) => void
 }) {
@@ -618,6 +622,7 @@ export function ListingMap({
             onToggleUnmapped={onToggleUnmapped}
             hasArea={!!drawnArea}
             onClearArea={() => onDrawnArea(null)}
+            onSearchArea={onSearchArea}
           />,
           state.legend,
         )}
@@ -834,6 +839,7 @@ function MapLegend({
   onToggleUnmapped,
   hasArea,
   onClearArea,
+  onSearchArea,
 }: {
   breaks: Array<number>
   noData: boolean
@@ -842,21 +848,37 @@ function MapLegend({
   onToggleUnmapped: () => void
   hasArea: boolean
   onClearArea: () => void
+  onSearchArea: () => void
 }) {
   const { t, fmt } = useApp()
   const bins = breaks.length + 1
   return (
     <div className="flex flex-col items-start">
       {hasArea && (
-        <button
-          type="button"
-          title={t('clearDrawnArea')}
-          onClick={onClearArea}
-          className="mb-2 inline-flex h-[34px] cursor-pointer items-center gap-2 rounded-full border-0 bg-primary pr-3.5 pl-3 text-[12.5px] font-medium whitespace-nowrap text-primary-foreground shadow-[var(--shadow-float)] hover:bg-primary/90"
-        >
-          <XIcon aria-hidden="true" className="size-4" />
-          <span>{t('clearDrawnArea')}</span>
-        </button>
+        <div className="mb-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            title={t('searchAreaTitle')}
+            onClick={onSearchArea}
+            className="inline-flex h-[34px] cursor-pointer items-center gap-2 rounded-full border-0 bg-primary pr-3.5 pl-3 text-[12.5px] font-medium whitespace-nowrap text-primary-foreground shadow-[var(--shadow-float)] hover:bg-primary/90"
+          >
+            <ListMagnifyingGlassIcon aria-hidden="true" className="size-4" />
+            <span>{t('searchArea')}</span>
+          </button>
+          <button
+            type="button"
+            title={t('clearDrawnArea')}
+            onClick={onClearArea}
+            className="inline-flex h-[34px] cursor-pointer items-center gap-2 rounded-full border-0 bg-background pr-3.5 pl-3 text-[12.5px] font-medium whitespace-nowrap text-foreground shadow-[var(--shadow-float)] hover:bg-muted max-[720px]:w-[34px] max-[720px]:justify-center max-[720px]:px-0"
+          >
+            <XIcon
+              aria-hidden="true"
+              className="size-4 text-muted-foreground"
+            />
+            {/* Phones keep the map clear: just the ×. */}
+            <span className="max-[720px]:sr-only">{t('clearDrawnArea')}</span>
+          </button>
+        </div>
       )}
       {(unmapped > 0 || unmappedActive) && (
         <button

@@ -8,6 +8,10 @@ import { PROPERTY_TYPES, typeLabel } from '../../shared/vocab'
 import type { Lang } from '../../shared/vocab'
 import type { Place } from '../../shared/types'
 import { listingPlace } from './labels'
+import { insidePolygon } from '../../shared/area'
+import type { DrawnArea } from '../../shared/area'
+
+export type { DrawnArea }
 
 export type RawListing = FunctionReturnType<
   typeof api.listings.page
@@ -136,9 +140,6 @@ export function groupOf(
   return { key: p.key, lat: p.lat, lon: p.lon, place: p }
 }
 
-/** A polygon drawn on the map, as [lat, lon] corners. */
-export type DrawnArea = Array<[number, number]>
-
 /** A saved drawn area, or null when it isn't one (at least three [lat, lon] corners). */
 export function validDrawnArea(v: unknown): DrawnArea | null {
   if (!Array.isArray(v) || v.length < 3) return null
@@ -149,21 +150,6 @@ export function validDrawnArea(v: unknown): DrawnArea | null {
       p.every((x) => typeof x === 'number' && Number.isFinite(x)),
   )
   return ok ? (v as DrawnArea) : null
-}
-
-/** Ray casting (even-odd, like the drawn shape's fill). */
-export function insidePolygon(lat: number, lon: number, poly: DrawnArea) {
-  let inside = false
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [yi, xi] = poly[i]
-    const [yj, xj] = poly[j]
-    if (
-      yi > lat !== yj > lat &&
-      lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi
-    )
-      inside = !inside
-  }
-  return inside
 }
 
 /** Whether the listing's best-known point (its neighbourhood, else its settlement) is in the area. */

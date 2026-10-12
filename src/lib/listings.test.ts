@@ -4,7 +4,6 @@ import {
   applyFilters,
   binOf,
   computeGroups,
-  insidePolygon,
   poolOf,
   ppmBreaks,
   prepare,
@@ -192,7 +191,6 @@ describe('listings', () => {
       new Set(),
     ).map((l) => l.id)
     expect(ids).toEqual(['a', 'c'])
-    expect(insidePolygon(42.66, 23.37, area)).toBe(false)
   })
 
   test('drawn area: a saved one is kept only when it is a polygon', () => {

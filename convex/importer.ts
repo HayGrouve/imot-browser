@@ -38,6 +38,7 @@ import {
 } from '../shared/parse'
 import type { SearchPage } from '../shared/parse'
 import {
+  NOMINATIM_UA,
   geocodeNeighborhood,
   geocodeSettlement,
   nominatimUrl,
@@ -50,8 +51,6 @@ import gazetteerData from '../shared/gazetteer-bg.json'
 /** Each step hands over to a fresh run of itself after this long. */
 const BUDGET_MS = 7 * 60_000
 const DETAIL_BATCH = 12
-const NOMINATIM_UA =
-  'onova-za-imotite/1.0 (+https://github.com/HayGrouve/onova-za-imotite)'
 
 let gazetteer: Gazetteer | null = null
 const gaz = () =>

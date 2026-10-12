@@ -211,11 +211,19 @@ export const reserve = internalMutation({
   },
 })
 
-/** Import the search link imot.bg built for the search dialog. */
+/** Import the search links imot.bg built for the search dialog (several for a drawn area). */
 export const enqueueSearch = internalMutation({
-  args: { workspace: v.string(), url: v.string(), options: optionsV },
-  handler: async (ctx, { workspace, url, options }) =>
-    await enqueue(ctx, { workspace, inputs: [url], options, searchUrl: url }),
+  args: { workspace: v.string(), urls: v.array(v.string()), options: optionsV },
+  handler: async (ctx, { workspace, urls, options }) => {
+    const inputs = [...new Set(urls)].slice(0, MAX_INPUTS)
+    if (!inputs.length) fail('badRequest')
+    return await enqueue(ctx, {
+      workspace,
+      inputs,
+      options,
+      searchUrl: inputs[0],
+    })
+  },
 })
 
 export const cancel = mutation({
