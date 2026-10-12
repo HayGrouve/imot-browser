@@ -3,7 +3,7 @@
 
 import { searchKey } from './text'
 import { term, typeLabel } from './vocab'
-import type { Agency, ListingFields, Place } from './types'
+import type { ListingFields, Place } from './types'
 
 export const SLIM_KEYS = [
   'url',
@@ -145,9 +145,4 @@ export function nextPriceHistory<
       out.push({ at: now, price, currency: currency ?? null })
   }
   return out
-}
-
-/** The heavy part of a listing, as the browser receives it. */
-export interface StoredDetails extends HeavyFields {
-  agency?: Agency | null
 }

@@ -33,7 +33,7 @@ import {
 } from '#/components/ui/collapsible'
 import { cn } from '#/lib/utils'
 import { errorCode, errorText, useApp } from './app-context'
-import { DIALOG, DialogHead } from './import-dialog'
+import { DIALOG, DialogHead } from './searches-dialog'
 import { Segmented } from './filter-bar'
 import { ImportOptionsPanel, JobView, jobRunning } from './job-view'
 import type { Job } from './job-view'

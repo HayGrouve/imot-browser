@@ -4,7 +4,6 @@ import {
   ArrowsDownUpIcon,
   CalendarBlankIcon,
   CaretDownIcon,
-  CloudArrowDownIcon,
   EyeIcon,
   EyeSlashIcon,
   FunnelSimpleIcon,
@@ -512,13 +511,11 @@ export function EmptyState({
   kind,
   message,
   onSearch,
-  onImport,
   onClear,
 }: {
   kind: 'error' | 'none' | 'filtered'
   message?: string
   onSearch: () => void
-  onImport: () => void
   onClear: () => void
 }) {
   const { t } = useApp()
@@ -545,16 +542,10 @@ export function EmptyState({
       {kind !== 'error' && (
         <EmptyContent className="flex-row flex-wrap justify-center">
           {kind === 'none' ? (
-            <>
-              <Button onClick={onSearch}>
-                <ListMagnifyingGlassIcon aria-hidden="true" />
-                {t('searchImot')}
-              </Button>
-              <Button variant="outline" onClick={onImport}>
-                <CloudArrowDownIcon aria-hidden="true" />
-                {t('import')}
-              </Button>
-            </>
+            <Button onClick={onSearch}>
+              <ListMagnifyingGlassIcon aria-hidden="true" />
+              {t('searchImot')}
+            </Button>
           ) : (
             <Button variant="outline" onClick={onClear}>
               {t('clearAll')}

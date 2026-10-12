@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useConvex, useQuery } from 'convex/react'
+import { useQuery } from 'convex/react'
 import { ListBulletsIcon, MapTrifoldIcon } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
@@ -18,7 +18,7 @@ import {
 import { BASE_LAYERS, ListingMap } from './listing-map'
 import type { MapHandle } from './listing-map'
 import { DetailDialog } from './detail-dialog'
-import { ImportDialog } from './import-dialog'
+import { SearchesDialog } from './searches-dialog'
 import { SearchDialog } from './search-dialog'
 import { AboutDialog } from './about-dialog'
 import { ShareDialog } from './share-dialog'
@@ -29,7 +29,6 @@ import { makeFormat } from '#/lib/format'
 import { loadJson, saveJson } from '#/lib/storage'
 import { resolveWorkspace } from '#/lib/workspace'
 import { useWorkspaceData } from '#/lib/use-data'
-import { download, toCsv } from '#/lib/csv'
 import {
   DEFAULT_FILTERS,
   applyFilters,
@@ -42,7 +41,6 @@ import {
 import type { Filters, GroupMode, Sort } from '#/lib/listings'
 import { DEFAULT_OPTIONS } from '../../shared/importer'
 import type { ImportOptions } from '../../shared/importer'
-import type { StoredDetails } from '../../shared/listing'
 
 interface Prefs {
   lang: Lang
@@ -121,7 +119,7 @@ export function App() {
   const [view, setView] = useState<'list' | 'map'>('list')
   const [detailId, setDetailId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<
-    null | 'import' | 'search' | 'about' | 'share'
+    null | 'searches' | 'search' | 'about' | 'share'
   >(null)
   const [limit, setLimit] = useState(PAGE)
   const mapRef = useRef<MapHandle>(null)
@@ -130,7 +128,6 @@ export function App() {
   const scroll = useRef<HTMLDivElement>(null)
   const toolbar = useRef<HTMLDivElement>(null)
   const narrow = useMedia('(max-width: 1000px)')
-  const convex = useConvex()
 
   const lang = prefs.lang
   const t = useCallback(
@@ -307,35 +304,6 @@ export function App() {
     : -1
   const detail = detailId ? (all?.find((l) => l.id === detailId) ?? null) : null
 
-  const exportCsv = async () => {
-    const id = toast.loading(t('csvPreparing'))
-    try {
-      const details = new Map<string, StoredDetails>()
-      for (let k = 0; k < filtered.length; k += 200) {
-        const rows = await convex.query(api.listings.detailsMany, {
-          workspace,
-          imotIds: filtered.slice(k, k + 200).map((l) => l.id),
-        })
-        for (const d of rows) details.set(d.imotId, d)
-      }
-      const csv = toCsv(
-        filtered.map((l) => ({
-          l,
-          d: details.get(l.id) ?? null,
-          starred: stars.has(l.id),
-          note: notes[l.id],
-        })),
-      )
-      download(
-        csv,
-        `imot-listings-${new Date().toISOString().slice(0, 10)}.csv`,
-      )
-      toast.dismiss(id)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err), { id })
-    }
-  }
-
   const empty = all
     ? filtered.length === 0
       ? all.length === 0
@@ -354,8 +322,7 @@ export function App() {
           onQuery={onQuery}
           busy={jobRunning(job)}
           onSearchImot={() => setDialog('search')}
-          onImport={() => setDialog('import')}
-          onCsv={() => void exportCsv()}
+          onSearches={() => setDialog('searches')}
           onToggleLang={() =>
             setPrefs((p) => ({ ...p, lang: p.lang === 'bg' ? 'en' : 'bg' }))
           }
@@ -435,7 +402,6 @@ export function App() {
                   kind={empty}
                   message={error ?? undefined}
                   onSearch={() => setDialog('search')}
-                  onImport={() => setDialog('import')}
                   onClear={() => setFilters({ ...DEFAULT_FILTERS, q: '' })}
                 />
               )}
@@ -523,12 +489,11 @@ export function App() {
           mapRef.current?.showOnMap(l)
         }}
       />
-      <ImportDialog
-        open={dialog === 'import'}
-        onOpenChange={(o) => setDialog(o ? 'import' : null)}
+      <SearchesDialog
+        open={dialog === 'searches'}
+        onOpenChange={(o) => setDialog(o ? 'searches' : null)}
         job={job}
         options={options}
-        onOptions={setOptions}
         sources={sources}
         all={all}
         deleting={deleting}

@@ -12,10 +12,9 @@ There is no sign-in yet. Each browser gets its own private set of listings (a ra
 
 1. **Search imot.bg** opens imot.bg's own search form: sale or rent, property types, city or province and its
    districts, price, price per m², area, floor, and under **More filters** construction, year, features and more.
-   **Search and import** asks imot.bg for the search link and imports every page of it.
-2. Or **Import** and paste imot.bg links, one per line: search results (`/obiavi/prodazhbi/...`, any filters, any page),
-   single listings (`/obiava-1j17...`) or mobile links (`m.imot.bg`).
-3. Listings appear as soon as the search pages are read; the listing pages, with full descriptions, all photos and
+   **Search and import** asks imot.bg for the search link and imports every page of it. The search is then kept under
+   **⋯ → Your searches**.
+2. Listings appear as soon as the search pages are read; the listing pages, with full descriptions, all photos and
    contacts, fill in while the import continues.
 
 Then:
@@ -27,9 +26,9 @@ Then:
   median €/m². Four base maps; the simple one follows the system light or dark theme.
 - **Listing details**: gallery, key facts, features, description, agency and phone, price history across imports, a link
   to the original and a private note. ←/→ step through photos, j/k through listings.
-- **Re-import** a search to refresh it. Price changes are recorded, and listings that disappeared are flagged. Listing
-  pages read in the last 3 days are reused unless the price changed.
-- **⋯ → Export filtered as CSV** (UTF-8, opens in Excel). Stars and notes stay in the browser.
+- **⋯ → Your searches** lists the saved searches: **Refresh** one (or all) to update it, or remove it. Price changes are
+  recorded, and listings that disappeared are flagged. Listing pages read in the last 3 days are reused unless the
+  price changed.
 
 ## How it works
 
@@ -54,7 +53,7 @@ imot.bg has no public API, so the importer reads the same HTML pages a browser s
 
 - **Session-bound links.** `plnk=…` and `slink=…` identify a search stored in *your* imot.bg session; anyone else gets
   "page not found". They are removed and the search is rebuilt from the path and visible filters, so filters that
-  exist only in the session are lost. Each imported search shows imot.bg's own filter summary to check against. Old
+  exist only in the session are lost. Each saved search shows imot.bg's own filter summary to check against. Old
   `pcgi/imot.cgi?act=3&slink=…` links can't be replayed at all.
 - **1,000-result cap.** Bigger searches are split into price bands. Listings without a price ("при запитване") don't
   match price filters, so a split search can miss them. One import stops at 5,000 listings, one browser at 10,000.
@@ -64,7 +63,7 @@ imot.bg has no public API, so the importer reads the same HTML pages a browser s
 - Descriptions stay in Bulgarian; labels, property types and common features are translated and place names
   transliterated. The same property listed by several agencies appears several times.
 - The search dialog depends on imot.bg's form markup and link builder. Not mirrored: business types, "price advantage"
-  and the agency filter. Pasting links still works if the dialog breaks.
+  and the agency filter.
 - Photos are hot-linked from imot.bg's servers and disappear when an ad is removed.
 
 Use the data for personal research. The listings belong to imot.bg and the advertisers.
