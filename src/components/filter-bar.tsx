@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { memo, useMemo, useRef, useState } from 'react'
 import {
   CaretDownIcon,
   CheckIcon,
@@ -72,7 +72,8 @@ function usePlaceLabels(all: Array<Listing>, lang: Lang) {
   }, [all, lang])
 }
 
-export function FilterBar({
+/** Memoised: a star changes its star count, and the rest of the bar stays as it was. */
+export const FilterBar = memo(function FilterBar({
   all,
   pool,
   filters,
@@ -341,7 +342,7 @@ export function FilterBar({
       )}
     </div>
   )
-}
+})
 
 function OptRow({
   label,

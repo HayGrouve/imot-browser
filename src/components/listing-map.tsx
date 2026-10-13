@@ -9,8 +9,8 @@ import {
   StackIcon,
   XIcon,
 } from '@phosphor-icons/react'
-import { useApp } from './app-context'
-import type { AppContextValue } from './app-context'
+import { useApp, useMarks } from './app-context'
+import type { AppContextValue, MarksContextValue } from './app-context'
 import { Segmented } from './filter-bar'
 import { useMedia } from './topbar'
 import {
@@ -151,7 +151,8 @@ function popupHtml(
     lang,
     hidden,
     stars,
-  }: Pick<AppContextValue, 't' | 'fmt' | 'lang' | 'hidden' | 'stars'>,
+  }: Pick<AppContextValue, 't' | 'fmt' | 'lang'> &
+    Pick<MarksContextValue, 'hidden' | 'stars'>,
 ) {
   const items = [...g.items].sort(
     (a, b) => (a.eur ?? Infinity) - (b.eur ?? Infinity),
@@ -278,8 +279,11 @@ export function ListingMap({
   onBaseLayer: (key: string) => void
   onGroupMode: (mode: GroupMode) => void
 }) {
-  const app = useApp()
-  const { t, fmt, lang, hidden, stars, toggleHidden } = app
+  const { t, fmt, lang } = useApp()
+  const { hidden, stars, toggleHidden } = useMarks()
+  // The popups read the marks when they open: a star doesn't make the markers anew.
+  const marks = useRef({ hidden, stars })
+  marks.current = { hidden, stars }
   const box = useRef<HTMLDivElement>(null)
   const [state, setState] = useState<MapState | null>(null)
   const [drawing, setDrawing] = useState(false)
@@ -405,6 +409,20 @@ export function ListingMap({
     }
   }, [state, baseLayer, dark])
 
+  // A star or a hidden listing: the open popup shows it, scrolled where it was. When a listing
+  // leaves (hidden), the markers below are made anew anyway, and reopen the popup.
+  useEffect(() => {
+    const popup = openKey.current
+      ? markers.current.get(openKey.current)?.getPopup()
+      : undefined
+    if (!popup) return
+    const list = () => popup.getElement()?.querySelector('.pop-list')
+    const top = list()?.scrollTop ?? 0
+    popup.update()
+    const after = list()
+    if (after) after.scrollTop = top
+  }, [hidden, stars])
+
   // Markers: one per settlement (or neighbourhood), sized by count, coloured by median €/m².
   useEffect(() => {
     if (!state) return
@@ -441,7 +459,7 @@ export function ListingMap({
         riseOnHover: true,
       })
       // Clearance so the popup isn't tucked under the map buttons, or the legend below it.
-      m.bindPopup(() => popupHtml(g, { t, fmt, lang, hidden, stars }), {
+      m.bindPopup(() => popupHtml(g, { t, fmt, lang, ...marks.current }), {
         maxWidth: Math.min(420, room),
         minWidth: Math.min(360, room),
         autoPanPaddingTopLeft: [20, 20],
@@ -475,7 +493,7 @@ export function ListingMap({
       }
     } else map.closePopup()
     refocus.current = null
-  }, [state, filtered, groupMode, selectedPlace, lang, t, fmt, hidden, stars])
+  }, [state, filtered, groupMode, selectedPlace, lang, t, fmt])
 
   // The drawn area, under the markers.
   useEffect(() => {

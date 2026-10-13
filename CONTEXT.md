@@ -9,7 +9,8 @@ The words this app uses, in code, copy and PRs.
 - **Listing page**: the listing's own page on imot.bg, read for the full data ("Fetch each listing's page").
 - **Source** (a saved search, under "Your searches"): a search link that was imported, keyed by a hash of its normalised
   URL. Listings from the old paste-links import, which is gone from the UI, belong to the source `manual`.
-- **Import** (`imports`): one run over a search (a new one from the search dialog, or a refresh from "Your searches").
+- **Import** (`imports`): one run over a search (a new one from the search dialog, or a refresh from "Your searches": an
+  area search's links are refreshed together, as one import).
   Steps: search pages → listing pages → places
   online → done. Only one runs at a time for everyone; the others are queued.
 - **Workspace**: the random key a browser makes on its first visit. All listings, sources and imports belong to one.

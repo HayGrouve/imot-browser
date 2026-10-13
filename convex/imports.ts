@@ -178,25 +178,37 @@ async function enqueue(
   return id
 }
 
-/** Import pasted imot.bg links (searches and single listings). */
-export const start = mutation({
-  args: { workspace: v.string(), inputs: v.string(), options: optionsV },
-  handler: async (ctx, { workspace, inputs, options }) => {
+/**
+ * Search the workspace's saved searches again: one import of their links, named by the first
+ * (an area search's links go together). A link that isn't one of its searches is dropped.
+ */
+export const refresh = mutation({
+  args: {
+    workspace: v.string(),
+    urls: v.array(v.string()),
+    options: optionsV,
+  },
+  returns: v.id('imports'),
+  handler: async (ctx, { workspace, urls, options }) => {
     checkWorkspace(workspace)
-    // Every pasted token goes to the job, so non-imot.bg links are reported as skipped.
-    const list = [
-      ...new Set(
-        inputs
-          .split(/\s+/)
-          .map((s) => s.trim())
-          .filter(Boolean),
-      ),
-    ].slice(0, MAX_INPUTS)
-    if (!list.some((s) => /imot\.bg/i.test(s))) fail('noLinks')
+    const saved = await ctx.db
+      .query('sources')
+      .withIndex('by_workspace_key', (q) => q.eq('workspace', workspace))
+      .collect()
+    const known = new Set(saved.map((s) => s.url))
+    const inputs = [...new Set(urls)]
+      .filter((u) => known.has(u))
+      .slice(0, MAX_INPUTS)
+    if (!inputs.length) fail('noLinks')
     await assertCanStart(ctx, workspace)
     await spend(ctx, 'importPerWorkspace', workspace)
     await spend(ctx, 'importAll', 'all')
-    return await enqueue(ctx, { workspace, inputs: list, options })
+    return await enqueue(ctx, {
+      workspace,
+      inputs,
+      options,
+      searchUrl: inputs[0],
+    })
   },
 })
 
