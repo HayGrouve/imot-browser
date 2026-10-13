@@ -3,11 +3,24 @@ import type { Lang } from '../../shared/vocab'
 import type { Format } from '#/lib/format'
 import type { Params, StringKey } from '#/lib/i18n'
 
+/** What every part of the app reads: it changes only with the language. */
 export interface AppContextValue {
   lang: Lang
   t: (key: StringKey, params?: Params) => string
   fmt: Format
   workspace: string
+}
+
+export const AppContext = createContext<AppContextValue | null>(null)
+
+export function useApp(): AppContextValue {
+  const ctx = useContext(AppContext)
+  if (!ctx) throw new Error('useApp outside AppContext')
+  return ctx
+}
+
+/** The marks this browser keeps on listings. Its own context: a star re-renders only what shows marks. */
+export interface MarksContextValue {
   stars: ReadonlySet<string>
   toggleStar: (id: string) => void
   hidden: ReadonlySet<string>
@@ -17,11 +30,11 @@ export interface AppContextValue {
   setNote: (id: string, text: string) => void
 }
 
-export const AppContext = createContext<AppContextValue | null>(null)
+export const MarksContext = createContext<MarksContextValue | null>(null)
 
-export function useApp(): AppContextValue {
-  const ctx = useContext(AppContext)
-  if (!ctx) throw new Error('useApp outside AppContext')
+export function useMarks(): MarksContextValue {
+  const ctx = useContext(MarksContext)
+  if (!ctx) throw new Error('useMarks outside MarksContext')
   return ctx
 }
 

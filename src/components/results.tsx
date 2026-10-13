@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useRef } from 'react'
 import {
   ArrowSquareOutIcon,
   ArrowsDownUpIcon,
@@ -28,7 +28,7 @@ import {
   EmptyTitle,
 } from '#/components/ui/empty'
 import { cn } from '#/lib/utils'
-import { useApp } from './app-context'
+import { useApp, useMarks } from './app-context'
 import { JobView } from './job-view'
 import type { Job } from './job-view'
 import { SORTS, isUnmapped } from '#/lib/listings'
@@ -190,7 +190,8 @@ export function PriceTrend({
   )
 }
 
-function Row({
+/** Memoised: a star or a hidden listing draws only its own row again. */
+const Row = memo(function Row({
   l,
   multiDeal,
   starred,
@@ -418,7 +419,7 @@ function Row({
       </div>
     </li>
   )
-}
+})
 
 export function ResultList({
   rows,
@@ -439,7 +440,8 @@ export function ResultList({
   onHover: (id: string, on: boolean) => void
   scrollRoot: React.RefObject<HTMLDivElement | null>
 }) {
-  const { t, fmt, stars, toggleStar, hidden, toggleHidden } = useApp()
+  const { t, fmt } = useApp()
+  const { stars, toggleStar, hidden, toggleHidden } = useMarks()
   const more = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLOListElement>(null)
   const shown = Math.min(limit, total)
@@ -459,16 +461,19 @@ export function ResultList({
   }, [onMore, scrollRoot, shown])
 
   // The row leaves the list: keep the keyboard on the one that takes its place.
-  const onHide = (id: string, row: HTMLElement) => {
-    const open = (el: Element | null) =>
-      el?.querySelector<HTMLButtonElement>('.row-open')
-    const next =
-      open(row.nextElementSibling) ?? open(row.previousElementSibling)
-    const hadFocus = row.contains(document.activeElement)
-    onHover(id, false)
-    toggleHidden(id)
-    if (hadFocus) requestAnimationFrame(() => next?.focus())
-  }
+  const onHide = useCallback(
+    (id: string, row: HTMLElement) => {
+      const open = (el: Element | null) =>
+        el?.querySelector<HTMLButtonElement>('.row-open')
+      const next =
+        open(row.nextElementSibling) ?? open(row.previousElementSibling)
+      const hadFocus = row.contains(document.activeElement)
+      onHover(id, false)
+      toggleHidden(id)
+      if (hadFocus) requestAnimationFrame(() => next?.focus())
+    },
+    [onHover, toggleHidden],
+  )
 
   return (
     <>

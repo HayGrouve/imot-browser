@@ -38,7 +38,7 @@ import { Button, buttonVariants } from '#/components/ui/button'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Textarea } from '#/components/ui/textarea'
 import { cn } from '#/lib/utils'
-import { useApp } from './app-context'
+import { useApp, useMarks } from './app-context'
 import { PriceTrend, Tag } from './results'
 import { isUnmapped } from '#/lib/listings'
 import type { Listing } from '#/lib/listings'
@@ -147,17 +147,8 @@ function DetailBody({
   onToggleHidden: (id: string) => void
   onShowOnMap: (l: Listing) => void
 }) {
-  const {
-    t,
-    fmt,
-    lang,
-    workspace,
-    stars,
-    toggleStar,
-    hidden: hiddenIds,
-    notes,
-    setNote,
-  } = useApp()
+  const { t, fmt, lang, workspace } = useApp()
+  const { stars, toggleStar, hidden: hiddenIds, notes, setNote } = useMarks()
   const details = useQuery(api.listings.details, { workspace, imotId: l.id })
   const body = useRef<HTMLDivElement>(null)
   const starred = stars.has(l.id)
