@@ -9,6 +9,7 @@ import {
   ppmBreaks,
   prepare,
   rampColor,
+  refreshUrls,
   rememberAreaSearch,
   shownOf,
   sortListings,
@@ -176,6 +177,24 @@ describe('listings', () => {
       ]),
     ).toEqual([one])
     expect(validAreaSearches('nope')).toEqual([])
+  })
+
+  test('searching again: an area search’s saved links together, else the one link', () => {
+    const area: DrawnArea = [
+      [42.7, 23.3],
+      [42.6, 23.4],
+      [42.6, 23.2],
+    ]
+    const list = [{ urls: ['u1', 'u2', 'u3'], area }]
+    const sources = ['u1', 'u2', 'u4'].map((url): Source => ({
+      ...SOURCES.get('s1')!,
+      key: url,
+      url,
+    }))
+    // u3's search was removed: it isn't searched again.
+    expect(refreshUrls('u2', list, sources)).toEqual(['u1', 'u2'])
+    expect(refreshUrls('u4', list, sources)).toEqual(['u4'])
+    expect(refreshUrls('u9', list, sources)).toEqual([])
   })
 
   test('sorting puts listings without the value last', () => {

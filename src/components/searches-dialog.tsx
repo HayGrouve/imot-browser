@@ -21,7 +21,7 @@ import {
 import { useApp, errorText } from './app-context'
 import { JobError, JobView, jobRunning } from './job-view'
 import type { Job } from './job-view'
-import { areaSearchOf, countBy } from '#/lib/listings'
+import { areaSearchOf, countBy, refreshUrls } from '#/lib/listings'
 import type { AreaSearch, Listing, Shown, Source } from '#/lib/listings'
 import { safeUrl } from '#/lib/urls'
 import type { ImportOptions } from '../../shared/importer'
@@ -100,7 +100,7 @@ export function Confirm({
   )
 }
 
-/** The saved searches: show, re-run, remove, and "Delete all data". New searches start from the search dialog. */
+/** The saved searches: show, search again, remove, and "Delete all data". New searches start from the search dialog. */
 export function SearchesDialog({
   open,
   onOpenChange,
@@ -116,7 +116,7 @@ export function SearchesDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   job: Job | null | undefined
-  /** The saved options: a re-run uses them. */
+  /** The saved options: a search again uses them. */
   options: ImportOptions
   sources: Array<Source>
   all: Array<Listing> | null
@@ -134,7 +134,7 @@ export function SearchesDialog({
   const [confirm, setConfirm] = useState<
     null | { kind: 'all' } | { kind: 'source'; key: string }
   >(null)
-  const start = useMutation(api.imports.start)
+  const refresh = useMutation(api.imports.refresh)
   const cancel = useMutation(api.imports.cancel)
   const removeSource = useMutation(api.sources.remove)
   const removeAll = useMutation(api.listings.removeAll)
@@ -158,14 +158,6 @@ export function SearchesDialog({
     String(b.lastImportAt).localeCompare(String(a.lastImportAt)),
   )
 
-  const run = async (inputs: string) => {
-    setError(null)
-    try {
-      await start({ workspace, inputs, options })
-    } catch (err) {
-      setError(errorText(t, err))
-    }
-  }
   const act = async (fn: () => Promise<unknown>) => {
     setError(null)
     try {
@@ -174,6 +166,8 @@ export function SearchesDialog({
       setError(errorText(t, err))
     }
   }
+  const run = (urls: Array<string>) =>
+    act(() => refresh({ workspace, urls, options }))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -233,12 +227,7 @@ export function SearchesDialog({
                     variant="outline"
                     disabled={busy}
                     onClick={() =>
-                      void run(
-                        list
-                          .map((s) => s.url)
-                          .filter(Boolean)
-                          .join('\n'),
-                      )
+                      void run(list.flatMap((s) => (s.url ? [s.url] : [])))
                     }
                   >
                     <ArrowClockwiseIcon aria-hidden="true" />
@@ -343,7 +332,12 @@ export function SearchesDialog({
                             className="text-muted-foreground hover:text-foreground"
                             title={t('reimport')}
                             aria-label={`${t('reimport')}: ${name}`}
-                            onClick={() => void run(s.url ?? '')}
+                            onClick={() =>
+                              s.url &&
+                              void run(
+                                refreshUrls(s.url, areaSearches, sources),
+                              )
+                            }
                           >
                             <ArrowClockwiseIcon aria-hidden="true" />
                           </Button>

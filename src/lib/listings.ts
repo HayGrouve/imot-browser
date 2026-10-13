@@ -238,6 +238,16 @@ export function areaSearchOf(
   return url == null ? undefined : list.find((s) => s.urls.includes(url))
 }
 
+/** What searching a saved search again searches: an area search's links all together, those still saved. */
+export function refreshUrls(
+  url: string,
+  list: ReadonlyArray<AreaSearch>,
+  sources: ReadonlyArray<Source>,
+): Array<string> {
+  const saved = new Set(sources.map((s) => s.url))
+  return (areaSearchOf(list, url)?.urls ?? [url]).filter((u) => saved.has(u))
+}
+
 /** The listings the filters pick from: the hidden ones, or all the others. */
 export function poolOf(
   list: Array<Listing>,

@@ -77,10 +77,29 @@ function card(
   }
 }
 
-async function startJob(t: TestConvex, workspace = WS, inputs = SEARCH) {
-  return await t.mutation(api.imports.start, {
+/** A search saved in the workspace, as an import leaves it. */
+async function saveSearch(t: TestConvex, workspace = WS, url = SEARCH) {
+  await t.run((ctx) =>
+    ctx.db.insert('sources', {
+      workspace,
+      key: url,
+      url,
+      input: url,
+      paramsText: '',
+      total: 1,
+      capped: false,
+      found: 1,
+      splits: 0,
+      lastImportAt: '2026-10-12T09:00:00.000Z',
+    }),
+  )
+}
+
+/** An import of these links, as the search dialog queues one. */
+async function startJob(t: TestConvex, workspace = WS, urls = [SEARCH]) {
+  return await t.mutation(internal.imports.enqueueSearch, {
     workspace,
-    inputs,
+    urls,
     options: OPTIONS,
   })
 }
@@ -138,10 +157,34 @@ describe('the queue', () => {
     expect((await job(t, first)).status).toBe('cancelled')
   })
 
-  test('pasted text needs an imot.bg link, and the workspace key is checked', async () => {
+  test('searching again is of the workspace’s own searches, all in one import', async () => {
     const t = setupConvex()
-    expect(await errorCodeOf(startJob(t, WS, 'hello world'))).toBe('noLinks')
-    expect(await errorCodeOf(startJob(t, 'x', SEARCH))).toBe('badWorkspace')
+    const other = 'https://www.imot.bg/obiavi/prodazhbi/oblast-gabrovo/kashta'
+    const elsewhere = 'https://www.imot.bg/obiavi/naemi/grad-sofiya'
+    await saveSearch(t, WS2, elsewhere)
+    const again = (urls: Array<string>, workspace = WS) =>
+      t.mutation(api.imports.refresh, { workspace, urls, options: OPTIONS })
+    // Another workspace's search, or one never saved, isn't searched.
+    expect(await errorCodeOf(again([elsewhere, 'hello world']))).toBe('noLinks')
+    await saveSearch(t, WS, other)
+    await saveSearch(t, WS, SEARCH)
+    await again([other, elsewhere, SEARCH, other])
+    const cur = await t.query(api.imports.current, { workspace: WS })
+    expect(cur?.searchUrl).toBe(other)
+    expect(cur?.inputs.map((i) => i.input)).toEqual([other, SEARCH])
+  })
+
+  test('the workspace key is checked', async () => {
+    const t = setupConvex()
+    expect(
+      await errorCodeOf(
+        t.mutation(api.imports.refresh, {
+          workspace: 'x',
+          urls: [SEARCH],
+          options: OPTIONS,
+        }),
+      ),
+    ).toBe('badWorkspace')
     expect(
       await errorCodeOf(
         t.query(api.listings.details, { workspace: 'a b', imotId: '1' }),
@@ -309,10 +352,14 @@ describe('saving listings', () => {
     expect(j.progress.detailsTotal).toBe(1)
   })
 
-  test('a pasted listing link whose page is gone leaves nothing behind', async () => {
+  test('a listing link whose page is gone leaves nothing behind', async () => {
     const t = setupConvex()
     const url = 'https://www.imot.bg/obiava-1b2-x'
-    const id = await startJob(t, WS, url)
+    const id = await t.mutation(internal.imports.enqueueSearch, {
+      workspace: WS,
+      urls: [url],
+      options: OPTIONS,
+    })
     await t.mutation(internal.imports.saveCards, {
       job: id,
       cards: [
